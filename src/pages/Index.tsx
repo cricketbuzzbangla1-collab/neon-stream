@@ -3,17 +3,24 @@ import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import EmptyState from "@/components/EmptyState";
 import NoticeBar from "@/components/NoticeBar";
+import LiveEventCard from "@/components/LiveEventCard";
 import { ChevronRight } from "lucide-react";
 
 const Index = () => {
   const { data: channels, loading: loadingChannels } = useChannels();
   const { data: categories, loading: loadingCats } = useCategories();
-  const { data: liveEvents } = useLiveEvents();
+  const { data: liveEvents, loading: loadingEvents } = useLiveEvents();
   const loading = loadingChannels || loadingCats;
 
   const featured = channels.filter((c) => c.isFeatured);
   const live = channels.filter((c) => c.isLive);
   const recent = [...channels].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 12);
+
+  const activeEvents = liveEvents.filter(e => e.isActive);
+  const now = Date.now();
+  const liveNowEvents = activeEvents.filter(e => now >= e.startTime && now <= e.endTime);
+  const upcomingEvents = activeEvents.filter(e => now < e.startTime);
+  const sortedEvents = [...liveNowEvents, ...upcomingEvents].slice(0, 20);
 
   return (
     <div className="min-h-screen pb-20 pt-16">
@@ -25,10 +32,25 @@ const Index = () => {
             {Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         </div>
-      ) : channels.length === 0 ? (
+      ) : channels.length === 0 && sortedEvents.length === 0 ? (
         <EmptyState message="No content available yet. Admin must add channels." />
       ) : (
         <div className="space-y-8 py-6">
+          {/* Live Events Slider */}
+          {sortedEvents.length > 0 && (
+            <section className="container">
+              <h2 className="text-lg font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                ⚡ Live Events
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </h2>
+              <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                {sortedEvents.map((ev) => (
+                  <LiveEventCard key={ev.id} event={ev} />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Featured Slider */}
           {featured.length > 0 && (
             <section className="container">
@@ -78,9 +100,11 @@ const Index = () => {
           )}
 
           {/* All Channels */}
-          <Section title="📺 All Channels">
-            {channels.map((ch) => <ChannelCard key={ch.id} channel={ch} />)}
-          </Section>
+          {channels.length > 0 && (
+            <Section title="📺 All Channels">
+              {channels.map((ch) => <ChannelCard key={ch.id} channel={ch} />)}
+            </Section>
+          )}
         </div>
       )}
     </div>
