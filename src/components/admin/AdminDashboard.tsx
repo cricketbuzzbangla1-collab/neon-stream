@@ -9,7 +9,7 @@ import LiveEventManager from "./LiveEventManager";
 const AdminDashboard = () => {
   return (
     <Tabs defaultValue="channels" className="space-y-6">
-      <TabsList className="glass-card p-1 flex flex-wrap gap-1 h-auto">
+      <TabsList className="glass-card p-1 flex flex-wrap gap-1 h-auto w-full overflow-x-auto">
         {["channels", "live-events", "categories", "countries", "ads", "settings"].map((t) => (
           <TabsTrigger
             key={t}
