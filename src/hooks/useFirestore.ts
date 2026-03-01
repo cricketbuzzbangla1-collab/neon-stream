@@ -34,10 +34,18 @@ export interface Country {
 export interface LiveEvent {
   id: string;
   title: string;
-  channelId: string;
+  teamA: string;
+  teamALogo: string;
+  teamB: string;
+  teamBLogo: string;
+  streamUrl: string;
+  playerType: "hls" | "native" | "iframe" | "hls-retry";
   startTime: number;
   endTime: number;
-  thumbnail: string;
+  countryId: string;
+  isFeatured: boolean;
+  isActive: boolean;
+  createdAt: number;
 }
 
 export interface Ad {
