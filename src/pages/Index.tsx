@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useChannels, useCategories, useCountries, useLiveEvents } from "@/hooks/useFirestore";
 import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
@@ -11,6 +12,7 @@ const Index = () => {
   const { data: categories, loading: loadingCats } = useCategories();
   const { data: liveEvents, loading: loadingEvents } = useLiveEvents();
   const loading = loadingChannels || loadingCats;
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
   const featured = channels.filter((c) => c.isFeatured);
   const live = channels.filter((c) => c.isLive);
@@ -21,6 +23,10 @@ const Index = () => {
   const liveNowEvents = activeEvents.filter(e => now >= e.startTime && now <= e.endTime);
   const upcomingEvents = activeEvents.filter(e => now < e.startTime);
   const sortedEvents = [...liveNowEvents, ...upcomingEvents].slice(0, 20);
+
+  const filteredChannels = selectedCat
+    ? channels.filter((c) => c.categoryId === selectedCat)
+    : channels;
 
   return (
     <div className="min-h-screen pb-20 pt-16">
@@ -67,40 +73,66 @@ const Index = () => {
             </section>
           )}
 
-          {/* Categories */}
+          {/* Categories Filter */}
           {categories.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-4">📂 Categories</h2>
               <div className="flex gap-3 overflow-x-auto pb-4 snap-x">
+                <button
+                  onClick={() => setSelectedCat(null)}
+                  className={`flex-shrink-0 glass-card px-4 py-2 text-sm font-medium transition-all duration-300 snap-start flex items-center gap-2 ${
+                    selectedCat === null
+                      ? "bg-primary text-primary-foreground neon-border"
+                      : "text-foreground hover:bg-primary/10"
+                  }`}
+                >
+                  All
+                </button>
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
-                    className="flex-shrink-0 glass-card neon-border px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-all duration-300 snap-start flex items-center gap-2"
+                    onClick={() => setSelectedCat(cat.id)}
+                    className={`flex-shrink-0 glass-card px-4 py-2 text-sm font-medium transition-all duration-300 snap-start flex items-center gap-2 ${
+                      selectedCat === cat.id
+                        ? "bg-primary text-primary-foreground neon-border"
+                        : "text-foreground hover:bg-primary/10"
+                    }`}
                   >
                     <span>{cat.icon}</span>
                     {cat.name}
                   </button>
                 ))}
               </div>
+
+              {/* Filtered results */}
+              {selectedCat && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
+                  {filteredChannels.length > 0 ? (
+                    filteredChannels.map((ch) => <ChannelCard key={ch.id} channel={ch} />)
+                  ) : (
+                    <p className="col-span-full text-sm text-muted-foreground text-center py-8">No channels in this category</p>
+                  )}
+                </div>
+              )}
             </section>
           )}
 
           {/* Live Now */}
-          {live.length > 0 && (
+          {!selectedCat && live.length > 0 && (
             <Section title="🔴 Live Now">
               {live.map((ch) => <ChannelCard key={ch.id} channel={ch} />)}
             </Section>
           )}
 
           {/* Recently Added */}
-          {recent.length > 0 && (
+          {!selectedCat && recent.length > 0 && (
             <Section title="🆕 Recently Added">
               {recent.map((ch) => <ChannelCard key={ch.id} channel={ch} />)}
             </Section>
           )}
 
           {/* All Channels */}
-          {channels.length > 0 && (
+          {!selectedCat && channels.length > 0 && (
             <Section title="📺 All Channels">
               {channels.map((ch) => <ChannelCard key={ch.id} channel={ch} />)}
             </Section>
