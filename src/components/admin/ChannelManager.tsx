@@ -60,6 +60,7 @@ const ChannelManager = () => {
             <input placeholder="Stream URL" value={form.streamUrl} onChange={(e) => setForm({ ...form, streamUrl: e.target.value })} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm sm:col-span-2" />
             <select value={form.playerType} onChange={(e) => setForm({ ...form, playerType: e.target.value as any })} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground text-sm">
               <option value="hls">HLS.js</option>
+              <option value="dash">DASH (Shaka)</option>
               <option value="native">Native</option>
               <option value="iframe">Iframe</option>
               <option value="hls-retry">HLS Aggressive</option>
