@@ -3,13 +3,13 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCxwmsBS-X_NrILcvFPDCqhH1zSOeK1MqU",
-  authDomain: "fbchat-5324b.firebaseapp.com",
-  projectId: "fbchat-5324b",
-  storageBucket: "fbchat-5324b.firebasestorage.app",
-  messagingSenderId: "933391437860",
-  appId: "1:933391437860:web:15e4b46ed677ade6a988b1",
-  measurementId: "G-VL93MK4H09"
+  apiKey: "AIzaSyAmPQ5fK9PPn_Wv-rIFFUfYiDA1vSXILTY",
+  authDomain: "livetv-c2912.firebaseapp.com",
+  projectId: "livetv-c2912",
+  storageBucket: "livetv-c2912.firebasestorage.app",
+  messagingSenderId: "680763910622",
+  appId: "1:680763910622:web:baf61bf7eba115a623d54f",
+  measurementId: "G-HCQN42B204"
 };
 
 const app = initializeApp(firebaseConfig);
