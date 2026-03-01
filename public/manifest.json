@@ -1,0 +1,15 @@
+{
+  "name": "LiveTV - Premium Streaming",
+  "short_name": "LiveTV",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#00f0ff",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
