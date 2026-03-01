@@ -161,16 +161,20 @@ const LiveEventManager = () => {
         ) : paginated.map((ev) => {
           const status = getStatus(ev);
           const country = countries.find(c => c.id === ev.countryId);
+          const teamAName = typeof ev.teamA === "object" ? (ev.teamA as any)?.name || "" : String(ev.teamA || "");
+          const teamBName = typeof ev.teamB === "object" ? (ev.teamB as any)?.name || "" : String(ev.teamB || "");
+          const teamAImg = typeof ev.teamA === "object" ? (ev.teamA as any)?.logo : ev.teamALogo;
+          const teamBImg = typeof ev.teamB === "object" ? (ev.teamB as any)?.logo : ev.teamBLogo;
           return (
             <div key={ev.id} className={`glass-card p-4 flex items-center justify-between ${ev.isFeatured ? "neon-border" : ""}`}>
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex items-center gap-1 shrink-0">
-                  {ev.teamALogo && <img src={ev.teamALogo} alt="" className="w-8 h-8 rounded-full object-cover" />}
+                  {teamAImg && <img src={teamAImg} alt="" className="w-8 h-8 rounded-full object-cover" />}
                   <span className="text-xs text-muted-foreground font-bold">vs</span>
-                  {ev.teamBLogo && <img src={ev.teamBLogo} alt="" className="w-8 h-8 rounded-full object-cover" />}
+                  {teamBImg && <img src={teamBImg} alt="" className="w-8 h-8 rounded-full object-cover" />}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{ev.teamA} vs {ev.teamB}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{teamAName} vs {teamBName}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {status === "live" && <span className="text-[hsl(var(--primary))] font-bold animate-pulse">🔴 LIVE</span>}
                     {status === "upcoming" && <span className="text-accent-foreground">⏳ Upcoming</span>}

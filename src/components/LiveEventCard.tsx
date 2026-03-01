@@ -13,6 +13,11 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
     return () => clearInterval(t);
   }, []);
 
+  const teamAName = typeof event.teamA === "object" ? (event.teamA as any)?.name || "" : String(event.teamA || "");
+  const teamBName = typeof event.teamB === "object" ? (event.teamB as any)?.name || "" : String(event.teamB || "");
+  const teamALogo = typeof event.teamA === "object" ? (event.teamA as any)?.logo : event.teamALogo;
+  const teamBLogo = typeof event.teamB === "object" ? (event.teamB as any)?.logo : event.teamBLogo;
+
   const status = now < event.startTime ? "upcoming" : now <= event.endTime ? "live" : "finished";
 
   const countdown = () => {
@@ -62,13 +67,13 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
       <div className="flex items-center justify-between gap-3 pt-6 pb-2">
         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
           <div className="w-14 h-14 rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden border border-border">
-            {event.teamALogo ? (
-              <img src={event.teamALogo} alt={event.teamA} className="w-full h-full object-cover" />
+            {teamALogo ? (
+              <img src={teamALogo} alt={teamAName} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xl font-bold text-muted-foreground">{event.teamA.charAt(0)}</span>
+              <span className="text-xl font-bold text-muted-foreground">{teamAName.charAt(0)}</span>
             )}
           </div>
-          <p className="text-xs font-semibold text-foreground text-center truncate w-full">{event.teamA}</p>
+          <p className="text-xs font-semibold text-foreground text-center truncate w-full">{teamAName}</p>
         </div>
 
         <div className="flex flex-col items-center gap-1 shrink-0">
@@ -77,19 +82,19 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
             <span className="text-[11px] font-mono font-bold text-primary tabular-nums">{countdown()}</span>
           )}
           {status === "live" && (
-            <span className="text-[11px] font-bold text-red-400 animate-pulse">● NOW</span>
+            <span className="text-[11px] font-bold text-destructive animate-pulse">● NOW</span>
           )}
         </div>
 
         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
           <div className="w-14 h-14 rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden border border-border">
-            {event.teamBLogo ? (
-              <img src={event.teamBLogo} alt={event.teamB} className="w-full h-full object-cover" />
+            {teamBLogo ? (
+              <img src={teamBLogo} alt={teamBName} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xl font-bold text-muted-foreground">{event.teamB.charAt(0)}</span>
+              <span className="text-xl font-bold text-muted-foreground">{teamBName.charAt(0)}</span>
             )}
           </div>
-          <p className="text-xs font-semibold text-foreground text-center truncate w-full">{event.teamB}</p>
+          <p className="text-xs font-semibold text-foreground text-center truncate w-full">{teamBName}</p>
         </div>
       </div>
 
