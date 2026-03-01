@@ -1,19 +1,45 @@
 import { useParams, Link } from "react-router-dom";
-import { useChannels, useCategories } from "@/hooks/useFirestore";
+import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore";
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import { ArrowLeft, Share2, Heart } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 
 const Watch = () => {
   const { id } = useParams<{ id: string }>();
   const { data: channels, loading } = useChannels();
   const { data: categories } = useCategories();
+  const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const [favorited, setFavorited] = useState(false);
 
-  const channel = channels.find((c) => c.id === id);
+  const isEvent = id?.startsWith("event-");
+  const eventId = isEvent ? id.replace("event-", "") : null;
+  const liveEvent = isEvent ? liveEvents.find((e) => e.id === eventId) : null;
+
+  // Build a virtual channel from the live event for the Player
+  const channel = useMemo(() => {
+    if (isEvent && liveEvent) {
+      const teamAName = typeof liveEvent.teamA === "object" ? (liveEvent.teamA as any)?.name || "" : String(liveEvent.teamA || "");
+      const teamBName = typeof liveEvent.teamB === "object" ? (liveEvent.teamB as any)?.name || "" : String(liveEvent.teamB || "");
+      return {
+        id: liveEvent.id,
+        name: `${teamAName} vs ${teamBName}`,
+        logo: "",
+        streamUrl: liveEvent.streamUrl,
+        playerType: liveEvent.playerType,
+        categoryId: "",
+        countryId: liveEvent.countryId,
+        isFeatured: liveEvent.isFeatured,
+        isLive: true,
+        order: 0,
+        createdAt: liveEvent.createdAt,
+      };
+    }
+    return channels.find((c) => c.id === id) || null;
+  }, [isEvent, liveEvent, channels, id]);
+
   const related = channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId);
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
 
@@ -31,7 +57,7 @@ const Watch = () => {
     toast.success(favorited ? "Removed from favorites" : "Added to favorites");
   };
 
-  if (loading) {
+  if (loading || (isEvent && eventsLoading)) {
     return (
       <div className="min-h-screen pt-16 pb-20 container">
         <div className="aspect-video skeleton-shimmer rounded-xl mb-6" />
