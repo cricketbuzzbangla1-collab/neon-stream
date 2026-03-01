@@ -111,6 +111,7 @@ const LiveEventManager = () => {
             <input placeholder="Stream URL" value={form.streamUrl} onChange={(e) => setForm({ ...form, streamUrl: e.target.value })} className={`${inputCls} sm:col-span-2`} />
             <select value={form.playerType} onChange={(e) => setForm({ ...form, playerType: e.target.value as any })} className={inputCls}>
               <option value="hls">HLS.js</option>
+              <option value="dash">DASH (Shaka)</option>
               <option value="native">Native</option>
               <option value="iframe">Iframe</option>
               <option value="hls-retry">HLS Aggressive</option>
