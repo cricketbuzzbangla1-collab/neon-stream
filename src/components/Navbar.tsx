@@ -29,7 +29,7 @@ const Navbar = () => {
           <Link to="/" className="flex items-center gap-2">
             <Tv className="w-6 h-6 text-primary neon-text" />
             <span className="font-display font-bold text-lg text-foreground">
-              Live<span className="text-primary">TV</span>
+              Abc<span className="text-primary">TV</span> <span className="text-primary">LIVE</span>
             </span>
           </Link>
           <div className="relative">
