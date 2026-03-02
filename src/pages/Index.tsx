@@ -49,7 +49,7 @@ const Index = () => {
                 ⚡ Live Events
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </h2>
-              <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+              <div className="flex flex-col gap-4">
                 {sortedEvents.map((ev) => (
                   <LiveEventCard key={ev.id} event={ev} />
                 ))}
