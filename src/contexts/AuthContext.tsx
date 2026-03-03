@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (name: string, phone: string, password: string) => {
     try {
-      const email = `${phone}@dummy.com`; // dummy email for phone-only auth
+      const email = `${phone}@dummy.com`; // dummy email for phone auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
