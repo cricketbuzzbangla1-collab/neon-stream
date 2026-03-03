@@ -3,6 +3,8 @@ import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore"
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
+import PostsSection from "@/components/PostsSection";
+import PollSection from "@/components/PollSection";
 import { ArrowLeft, Share2, Heart } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -18,23 +20,14 @@ const Watch = () => {
   const eventId = isEvent ? id.replace("event-", "") : null;
   const liveEvent = isEvent ? liveEvents.find((e) => e.id === eventId) : null;
 
-  // Build a virtual channel from the live event for the Player
   const channel = useMemo(() => {
     if (isEvent && liveEvent) {
       const teamAName = typeof liveEvent.teamA === "object" ? (liveEvent.teamA as any)?.name || "" : String(liveEvent.teamA || "");
       const teamBName = typeof liveEvent.teamB === "object" ? (liveEvent.teamB as any)?.name || "" : String(liveEvent.teamB || "");
       return {
-        id: liveEvent.id,
-        name: `${teamAName} vs ${teamBName}`,
-        logo: "",
-        streamUrl: liveEvent.streamUrl,
-        playerType: liveEvent.playerType,
-        categoryId: "",
-        countryId: liveEvent.countryId,
-        isFeatured: liveEvent.isFeatured,
-        isLive: true,
-        order: 0,
-        createdAt: liveEvent.createdAt,
+        id: liveEvent.id, name: `${teamAName} vs ${teamBName}`, logo: "", streamUrl: liveEvent.streamUrl,
+        playerType: liveEvent.playerType, categoryId: "", countryId: liveEvent.countryId,
+        isFeatured: liveEvent.isFeatured, isLive: true, order: 0, createdAt: liveEvent.createdAt,
       };
     }
     return channels.find((c) => c.id === id) || null;
@@ -44,12 +37,8 @@ const Watch = () => {
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
 
   const handleShare = async () => {
-    try {
-      await navigator.share({ title: channel?.name, url: window.location.href });
-    } catch {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copied!");
-    }
+    try { await navigator.share({ title: channel?.name, url: window.location.href }); }
+    catch { navigator.clipboard.writeText(window.location.href); toast.success("Link copied!"); }
   };
 
   const toggleFav = () => {
@@ -79,14 +68,12 @@ const Watch = () => {
   return (
     <div className="min-h-screen pt-16 pb-20">
       <div className="container space-y-6 py-4">
-        {/* Back + Title */}
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm">Back</span>
+            <ArrowLeft className="w-5 h-5" /><span className="text-sm">Back</span>
           </Link>
           <div className="flex gap-2">
-            <button onClick={toggleFav} className={`p-2 rounded-lg transition-all duration-300 ${favorited ? "text-accent glow-accent" : "text-muted-foreground hover:text-foreground"}`}>
+            <button onClick={toggleFav} className={`p-2 rounded-lg transition-all ${favorited ? "text-accent glow-accent" : "text-muted-foreground hover:text-foreground"}`}>
               <Heart className={`w-5 h-5 ${favorited ? "fill-current" : ""}`} />
             </button>
             <button onClick={handleShare} className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
@@ -95,18 +82,19 @@ const Watch = () => {
           </div>
         </div>
 
-        {/* Player */}
         <Player channel={channel} />
 
-        {/* Info */}
         <div className="glass-card p-4">
           <h1 className="text-xl font-display font-bold text-foreground">{channel.name}</h1>
-          {sameCategory && (
-            <span className="text-xs text-primary mt-1 inline-block">{sameCategory.icon} {sameCategory.name}</span>
-          )}
+          {sameCategory && <span className="text-xs text-primary mt-1 inline-block">{sameCategory.icon} {sameCategory.name}</span>}
         </div>
 
-        {/* Related */}
+        {/* Social Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PostsSection />
+          <PollSection />
+        </div>
+
         {related.length > 0 && (
           <div>
             <h2 className="text-lg font-display font-bold text-foreground mb-4">Related Channels</h2>
