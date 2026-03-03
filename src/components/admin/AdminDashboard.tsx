@@ -6,12 +6,16 @@ import AdManager from "./AdManager";
 import SettingsManager from "./SettingsManager";
 import LiveEventManager from "./LiveEventManager";
 import PlaylistManager from "./PlaylistManager";
+import UserManager from "./UserManager";
+import ChatManager from "./ChatManager";
+import PostPollManager from "./PostPollManager";
+import AppSettingsManager from "./AppSettingsManager";
 
 const AdminDashboard = () => {
   return (
     <Tabs defaultValue="channels" className="space-y-6">
       <TabsList className="glass-card p-1 flex flex-wrap gap-1 h-auto w-full overflow-x-auto">
-        {["channels", "playlist", "live-events", "categories", "countries", "ads", "settings"].map((t) => (
+        {["channels", "playlist", "live-events", "categories", "countries", "ads", "users", "chat", "posts-polls", "app-settings", "settings"].map((t) => (
           <TabsTrigger
             key={t}
             value={t}
@@ -27,6 +31,10 @@ const AdminDashboard = () => {
       <TabsContent value="categories"><CategoryManager /></TabsContent>
       <TabsContent value="countries"><CountryManager /></TabsContent>
       <TabsContent value="ads"><AdManager /></TabsContent>
+      <TabsContent value="users"><UserManager /></TabsContent>
+      <TabsContent value="chat"><ChatManager /></TabsContent>
+      <TabsContent value="posts-polls"><PostPollManager /></TabsContent>
+      <TabsContent value="app-settings"><AppSettingsManager /></TabsContent>
       <TabsContent value="settings"><SettingsManager /></TabsContent>
     </Tabs>
   );

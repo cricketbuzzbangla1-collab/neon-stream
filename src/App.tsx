@@ -3,13 +3,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AdminProvider } from "@/contexts/AdminContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import TelegramButton from "@/components/TelegramButton";
+import GlobalChat from "@/components/GlobalChat";
 import Index from "./pages/Index";
 import Watch from "./pages/Watch";
 import Search from "./pages/Search";
 import Admin from "./pages/Admin";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -17,7 +19,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <AdminProvider>
+      <AuthProvider>
         <TooltipProvider>
           <Sonner />
           <BrowserRouter>
@@ -27,12 +29,14 @@ const App = () => (
               <Route path="/watch/:id" element={<Watch />} />
               <Route path="/search" element={<Search />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-            <TelegramButton />
+            <GlobalChat />
           </BrowserRouter>
         </TooltipProvider>
-      </AdminProvider>
+      </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
