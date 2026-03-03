@@ -45,6 +45,7 @@ export interface LiveEvent {
   countryId: string;
   isFeatured: boolean;
   isActive: boolean;
+  manualStatus?: "" | "live" | "upcoming" | "finished";
   createdAt: number;
 }
 
