@@ -1,48 +1,66 @@
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { auth, db } from "@/firebase/config";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
-type AuthContextType = {
+interface AuthContextType {
+  user: any;
+  profile: any;
   register: (name: string, phone: string, password: string) => Promise<void>;
-};
+  login: (phone: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: any) => {
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        const docSnap = await doc(db, "users", u.uid).get();
+        setProfile(docSnap.data());
+      } else {
+        setProfile(null);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   const register = async (name: string, phone: string, password: string) => {
-    try {
-      const email = `${phone}@dummy.com`; // dummy email for phone-only auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+    const email = `${phone}@dummy.com`;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const u = userCredential.user;
 
-      // Firestore write
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name,
-        phone,
-        role: "user",
-        avatar: null,
-        isBanned: false,
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp()
-      });
+    await setDoc(doc(db, "users", u.uid), {
+      uid: u.uid,
+      name,
+      phone,
+      role: "user",
+      avatar: null,
+      isBanned: false,
+      createdAt: serverTimestamp(),
+      lastLogin: serverTimestamp()
+    });
+  };
 
-    } catch (err) {
-      throw err;
-    }
+  const login = async (phone: string, password: string) => {
+    const email = `${phone}@dummy.com`;
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const logout = async () => {
+    await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ register }}>
+    <AuthContext.Provider value={{ user, profile, register, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
