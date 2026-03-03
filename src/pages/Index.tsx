@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useChannels, useCategories, useCountries, useLiveEvents } from "@/hooks/useFirestore";
 import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import EmptyState from "@/components/EmptyState";
 import NoticeBar from "@/components/NoticeBar";
-import LiveEventCard from "@/components/LiveEventCard";
+import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import { ChevronRight } from "lucide-react";
 
 const Index = () => {
@@ -13,16 +13,29 @@ const Index = () => {
   const { data: liveEvents, loading: loadingEvents } = useLiveEvents();
   const loading = loadingChannels || loadingCats;
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+
+  // Re-render every second for live status updates
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const featured = channels.filter((c) => c.isFeatured);
   const live = channels.filter((c) => c.isLive);
   const recent = [...channels].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 12);
 
-  const activeEvents = liveEvents.filter(e => e.isActive);
-  const now = Date.now();
-  const liveNowEvents = activeEvents.filter(e => now >= e.startTime && now <= e.endTime);
-  const upcomingEvents = activeEvents.filter(e => now < e.startTime);
-  const sortedEvents = [...liveNowEvents, ...upcomingEvents].slice(0, 20);
+  // Filter active events, exclude finished, sort live first then upcoming by start time
+  const activeEvents = liveEvents.filter(e => {
+    if (!e.isActive) return false;
+    const status = getEventStatus(e);
+    return status !== "finished";
+  });
+
+  const liveNowEvents = activeEvents.filter(e => getEventStatus(e) === "live");
+  const upcomingEvents = activeEvents
+    .filter(e => getEventStatus(e) === "upcoming")
+    .sort((a, b) => a.startTime - b.startTime);
 
   const filteredChannels = selectedCat
     ? channels.filter((c) => c.categoryId === selectedCat)
@@ -38,19 +51,35 @@ const Index = () => {
             {Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         </div>
-      ) : channels.length === 0 && sortedEvents.length === 0 ? (
+      ) : channels.length === 0 && liveNowEvents.length === 0 && upcomingEvents.length === 0 ? (
         <EmptyState message="No content available yet. Admin must add channels." />
       ) : (
         <div className="space-y-8 py-6">
-          {/* Live Events Slider */}
-          {sortedEvents.length > 0 && (
+          {/* LIVE Events Section */}
+          {liveNowEvents.length > 0 && (
             <section className="container">
-              <h2 className="text-lg font-display font-bold text-foreground mb-4 flex items-center gap-2">
-                ⚡ Live Events
+              <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Live Now
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </h2>
-              <div className="flex flex-col gap-4">
-                {sortedEvents.map((ev) => (
+              <div className="flex flex-col gap-3">
+                {liveNowEvents.map((ev) => (
+                  <LiveEventCard key={ev.id} event={ev} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* UPCOMING Events Section */}
+          {upcomingEvents.length > 0 && (
+            <section className="container">
+              <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                ⏳ Upcoming
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </h2>
+              <div className="flex flex-col gap-3">
+                {upcomingEvents.map((ev) => (
                   <LiveEventCard key={ev.id} event={ev} />
                 ))}
               </div>
@@ -104,7 +133,6 @@ const Index = () => {
                 ))}
               </div>
 
-              {/* Filtered results */}
               {selectedCat && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
                   {filteredChannels.length > 0 ? (
