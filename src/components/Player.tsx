@@ -138,7 +138,7 @@ const Player = ({ channel }: PlayerProps) => {
     if (channel.playerType === "dash" || url.includes(".mpd")) return "dash";
     if (channel.playerType === "hls" || url.includes(".m3u8")) return "hls";
     if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return "native";
-    return channel.playerType || "hls";
+    return (channel.playerType && channel.playerType !== "custom" ? channel.playerType : "hls") as PlayerMode;
   }, [channel.playerType]);
 
   const destroyHls = () => {
