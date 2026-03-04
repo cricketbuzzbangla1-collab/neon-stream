@@ -2,13 +2,16 @@ import { useState, useEffect } from "react";
 import { collection, onSnapshot, updateDoc, doc, getDocs, writeBatch, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAppSettings, updateAppSettings } from "@/hooks/useAppSettings";
-import { MessageCircle, Trash2, Clock, Filter, Power } from "lucide-react";
+import UserBadges from "@/components/UserBadges";
+import { MessageCircle, Trash2, Clock, Filter, Power, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 interface ChatMsg {
   id: string;
   userName: string;
   message: string;
+  channelId: string;
+  badges: string[];
   createdAt: number;
   isDeleted: boolean;
 }
@@ -87,14 +90,22 @@ const ChatManager = () => {
         </div>
       </div>
 
-      <div className="space-y-1 max-h-60 overflow-y-auto">
-        {messages.slice(0, 20).map(m => (
-          <div key={m.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-secondary/50 text-sm">
+      <div className="space-y-1 max-h-72 overflow-y-auto">
+        {messages.slice(0, 30).map(m => (
+          <div key={m.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-secondary/50 text-sm gap-2">
             <div className="flex-1 min-w-0">
-              <span className="text-xs text-primary font-semibold">{m.userName}: </span>
-              <span className="text-xs text-foreground truncate">{m.message}</span>
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-xs text-primary font-semibold">{m.userName}</span>
+                <UserBadges badges={(m.badges || []) as any} />
+                {m.channelId && m.channelId !== "global" && (
+                  <span className="text-[9px] px-1 rounded bg-secondary text-muted-foreground">
+                    <Globe className="w-2.5 h-2.5 inline" /> #{m.channelId.slice(0, 6)}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-foreground truncate block">{m.message}</span>
             </div>
-            <button onClick={() => deleteMsg(m.id)} className="p-1 text-muted-foreground hover:text-destructive">
+            <button onClick={() => deleteMsg(m.id)} className="p-1 text-muted-foreground hover:text-destructive shrink-0">
               <Trash2 className="w-3 h-3" />
             </button>
           </div>

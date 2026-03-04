@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, ListMusic, Palette, User, LogOut, Send } from "lucide-react";
+import { Home, Search, ListMusic, Palette, User, LogOut, Send, MessageCircle } from "lucide-react";
 import { useTheme, ThemeType } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSettings } from "@/hooks/useFirestore";
 import { useState } from "react";
+import ChatDrawer from "@/components/ChatDrawer";
 
 const themes: { value: ThemeType; label: string; icon: string }[] = [
   { value: "dark-neon", label: "Dark Neon", icon: "🟢" },
@@ -15,13 +17,18 @@ const Navbar = () => {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { user, profile, isAdmin, logout } = useAuth();
+  const { settings } = useSettings();
   const [showThemes, setShowThemes] = useState(false);
   const [showUser, setShowUser] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const telegramUrl = (settings as any)?.telegramUrl || "https://t.me/abctvlive";
 
   const navItems = [
     { to: "/", icon: Home, label: "Home" },
     { to: "/search", icon: Search, label: "Search" },
-    { to: "/my-playlist", icon: ListMusic, label: "My Playlist" },
+    { to: "__chat__", icon: MessageCircle, label: "Chat" },
+    { to: "/my-playlist", icon: ListMusic, label: "Playlist" },
   ];
 
   return (
@@ -36,8 +43,8 @@ const Navbar = () => {
           </Link>
           <div className="flex items-center gap-1">
             {/* Telegram */}
-            <a href="https://t.me/abctvlive" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-secondary transition-all">
-              <Send className="w-5 h-5 text-muted-foreground" />
+            <a href={telegramUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-secondary transition-all" title="Telegram">
+              <Send className="w-5 h-5 text-primary" />
             </a>
             {/* Theme */}
             <div className="relative">
@@ -91,6 +98,18 @@ const Navbar = () => {
       <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-border/30 md:hidden" style={{ background: `hsl(var(--nav-glass) / var(--glass-opacity))` }}>
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => {
+            if (item.to === "__chat__") {
+              return (
+                <button
+                  key="chat"
+                  onClick={() => setChatOpen(true)}
+                  className="flex flex-col items-center gap-1 px-4 py-2 transition-all text-muted-foreground"
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                </button>
+              );
+            }
             const active = location.pathname === item.to;
             return (
               <Link key={item.to} to={item.to}
@@ -102,6 +121,9 @@ const Navbar = () => {
           })}
         </div>
       </nav>
+
+      {/* Chat Drawer */}
+      <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
     </>
   );
 };

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useChannels, useCategories, useCountries, addDocument, updateDocument, deleteDocument, Channel } from "@/hooks/useFirestore";
-import { Plus, Trash2, Edit, Save, X } from "lucide-react";
+import { Plus, Trash2, Edit, Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
 
 const empty: Omit<Channel, "id"> = {
@@ -15,6 +15,12 @@ const ChannelManager = () => {
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = channels.filter(ch =>
+    ch.name?.toLowerCase().includes(search.toLowerCase()) ||
+    ch.streamUrl?.toLowerCase().includes(search.toLowerCase())
+  );
 
   const handleSave = async () => {
     if (!form.name || !form.streamUrl) { toast.error("Name and Stream URL required"); return; }
@@ -44,9 +50,20 @@ const ChannelManager = () => {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => { setShowForm(true); setForm(empty); setEditId(null); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
-        <Plus className="w-4 h-4" /> Add Channel
-      </button>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={() => { setShowForm(true); setForm(empty); setEditId(null); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
+          <Plus className="w-4 h-4" /> Add Channel
+        </button>
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search channels..."
+            className="w-full pl-9 pr-4 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+        </div>
+      </div>
 
       {showForm && (
         <div className="glass-card neon-border p-6 space-y-4">
@@ -92,9 +109,11 @@ const ChannelManager = () => {
 
       {/* List */}
       <div className="space-y-2">
-        {channels.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">No channels added yet</p>
-        ) : channels.map((ch) => (
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            {search ? "No channels match your search" : "No channels added yet"}
+          </p>
+        ) : filtered.map((ch) => (
           <div key={ch.id} className="glass-card p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {ch.logo && <img src={ch.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />}
