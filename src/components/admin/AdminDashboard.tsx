@@ -11,10 +11,20 @@ import ChatManager from "./ChatManager";
 import PostPollManager from "./PostPollManager";
 import AppSettingsManager from "./AppSettingsManager";
 import ReportManager from "./ReportManager";
+import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 
 const AdminDashboard = () => {
+  const onlineCount = useOnlineUsers();
+
   return (
-    <Tabs defaultValue="channels" className="space-y-6">
+    <div className="space-y-6">
+      <div className="glass-card neon-border p-4 flex items-center gap-3 w-fit">
+        <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+        <span className="text-sm font-semibold text-foreground">
+          Online Users: {onlineCount}
+        </span>
+      </div>
+      <Tabs defaultValue="channels" className="space-y-6">
       <TabsList className="glass-card p-1 flex flex-wrap gap-1 h-auto w-full overflow-x-auto">
         {["channels", "playlist", "live-events", "categories", "countries", "ads", "users", "chat", "posts-polls", "reports", "app-settings", "settings"].map((t) => (
           <TabsTrigger
@@ -39,6 +49,7 @@ const AdminDashboard = () => {
       <TabsContent value="app-settings"><AppSettingsManager /></TabsContent>
       <TabsContent value="settings"><SettingsManager /></TabsContent>
     </Tabs>
+    </div>
   );
 };
 

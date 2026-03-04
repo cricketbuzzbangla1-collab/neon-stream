@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { usePresence } from "@/hooks/usePresence";
 
 interface AuthContextType {
   user: any;
@@ -50,6 +51,9 @@ export const AuthProvider = ({ children }: any) => {
   const isModerator = profile?.role === "moderator";
   const isBanned = profile?.isBanned === true;
 
+  // Track online presence
+  usePresence(user?.uid || null);
+
   const register = async (name: string, phone: string, password: string) => {
     const email = `${phone}@abctv.app`;
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -74,6 +78,9 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   const logout = async () => {
+    if (user?.uid) {
+      await deleteDoc(doc(db, "onlineUsers", user.uid)).catch(() => {});
+    }
     await signOut(auth);
   };
 
