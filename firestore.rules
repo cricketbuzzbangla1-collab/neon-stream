@@ -168,5 +168,15 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // --------------------
+    // ONLINE USERS (PRESENCE)
+    // --------------------
+
+    match /onlineUsers/{uid} {
+      allow read: if isAdmin();
+      allow create, update: if isLoggedIn() && request.auth.uid == uid;
+      allow delete: if isLoggedIn() && request.auth.uid == uid;
+    }
+
   }
 }
