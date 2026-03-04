@@ -3,8 +3,18 @@ import { collection, query, orderBy, limit, onSnapshot, addDoc, updateDoc, delet
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { Heart, Trash2, Send, Image } from "lucide-react";
+import { getAutoBadges } from "@/lib/badges";
+import UserBadges from "@/components/UserBadges";
+import { Heart, Trash2, Send, MessageSquare, Share2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+
+interface Comment {
+  userId: string;
+  userName: string;
+  text: string;
+  createdAt: number;
+  badges: string[];
+}
 
 interface Post {
   id: string;
@@ -12,11 +22,18 @@ interface Post {
   userName: string;
   text: string;
   imageUrl?: string;
+  channelId?: string;
   likes: string[];
+  comments: Comment[];
+  badges: string[];
   createdAt: number;
 }
 
-const PostsSection = () => {
+interface PostsSectionProps {
+  channelId?: string;
+}
+
+const PostsSection = ({ channelId }: PostsSectionProps) => {
   const { user, profile, isAdmin, isBanned } = useAuth();
   const { settings } = useAppSettings();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -24,27 +41,38 @@ const PostsSection = () => {
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(20));
     const unsub = onSnapshot(q, (snap) => {
-      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Post)));
+      const allPosts = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post));
+      // Filter by channelId if provided
+      const filtered = channelId
+        ? allPosts.filter(p => p.channelId === channelId || !p.channelId)
+        : allPosts;
+      setPosts(filtered);
       setLoading(false);
     });
     return unsub;
-  }, []);
+  }, [channelId]);
 
   const handlePost = async () => {
     if (!user || !profile || isBanned) return;
     if (!text.trim()) return toast.error("Write something");
     setSending(true);
+    const badges = getAutoBadges(profile);
     try {
       await addDoc(collection(db, "posts"), {
         userId: user.uid,
         userName: profile.name,
         text: text.trim(),
         imageUrl: imageUrl.trim() || "",
+        channelId: channelId || "",
         likes: [],
+        comments: [],
+        badges,
         createdAt: Date.now(),
       });
       setText("");
@@ -61,9 +89,44 @@ const PostsSection = () => {
     await updateDoc(doc(db, "posts", post.id), { likes: newLikes });
   };
 
+  const handleComment = async (postId: string) => {
+    if (!user || !profile) return toast.error("Login to comment");
+    const commentText = commentInputs[postId]?.trim();
+    if (!commentText) return;
+    const badges = getAutoBadges(profile);
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    const newComment: Comment = {
+      userId: user.uid,
+      userName: profile.name,
+      text: commentText,
+      createdAt: Date.now(),
+      badges,
+    };
+    await updateDoc(doc(db, "posts", postId), {
+      comments: [...(post.comments || []), newComment],
+    });
+    setCommentInputs(prev => ({ ...prev, [postId]: "" }));
+    toast.success("Comment added");
+  };
+
+  const handleShare = (post: Post) => {
+    const url = `${window.location.origin}/watch/${post.channelId || ""}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied!");
+  };
+
   const handleDelete = async (id: string) => {
     await deleteDoc(doc(db, "posts", id));
     toast.success("Post deleted");
+  };
+
+  const toggleComments = (postId: string) => {
+    setExpandedComments(prev => {
+      const n = new Set(prev);
+      n.has(postId) ? n.delete(postId) : n.add(postId);
+      return n;
+    });
   };
 
   if (settings?.postEnabled === false) return null;
@@ -107,9 +170,12 @@ const PostsSection = () => {
           <p className="text-sm text-muted-foreground text-center py-6">No posts yet</p>
         ) : (
           posts.map((post) => (
-            <div key={post.id} className="glass-card p-3 space-y-2">
+            <div key={post.id} className="glass-card p-3 space-y-2 animate-fade-in">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-primary">{post.userName}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-primary">{post.userName}</span>
+                  <UserBadges badges={(post.badges || []) as any} />
+                </div>
                 <span className="text-[10px] text-muted-foreground">
                   {new Date(post.createdAt).toLocaleDateString()}
                 </span>
@@ -123,12 +189,50 @@ const PostsSection = () => {
                   <Heart className={`w-3.5 h-3.5 ${post.likes?.includes(user?.uid || "") ? "fill-accent text-accent" : ""}`} />
                   {(post.likes?.length || 0)}
                 </button>
+                <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  {(post.comments?.length || 0)}
+                  {expandedComments.has(post.id) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+                <button onClick={() => handleShare(post)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
                 {isAdmin && (
-                  <button onClick={() => handleDelete(post.id)} className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1">
+                  <button onClick={() => handleDelete(post.id)} className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 ml-auto">
                     <Trash2 className="w-3 h-3" /> Delete
                   </button>
                 )}
               </div>
+
+              {/* Comments */}
+              {expandedComments.has(post.id) && (
+                <div className="pl-3 border-l-2 border-border/30 space-y-2 mt-2">
+                  {(post.comments || []).map((c, i) => (
+                    <div key={i} className="text-xs space-y-0.5">
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-primary">{c.userName}</span>
+                        <UserBadges badges={(c.badges || []) as any} />
+                      </div>
+                      <p className="text-foreground">{c.text}</p>
+                    </div>
+                  ))}
+                  {user && (
+                    <div className="flex gap-1.5">
+                      <input
+                        value={commentInputs[post.id] || ""}
+                        onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleComment(post.id); }}
+                        placeholder="Reply..."
+                        maxLength={200}
+                        className="flex-1 px-2 py-1 rounded-md bg-secondary border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+                      />
+                      <button onClick={() => handleComment(post.id)} className="px-2 py-1 rounded-md bg-primary text-primary-foreground text-xs">
+                        <Send className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))
         )}

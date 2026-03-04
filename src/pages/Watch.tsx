@@ -5,7 +5,8 @@ import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
 import PollSection from "@/components/PollSection";
-import { ArrowLeft, Share2, Heart, AlertTriangle } from "lucide-react";
+import ChatPanel from "@/components/ChatPanel";
+import { ArrowLeft, Share2, Heart, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
@@ -18,23 +19,14 @@ const Watch = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const [favorited, setFavorited] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
   const liveEvent = isEvent ? liveEvents.find((e) => e.id === eventId) : null;
 
-  // Playlist channel support
   const isPlaylist = id?.startsWith("playlist-");
-  const [playlistChannel, setPlaylistChannel] = useState<any>(null);
-
-  useEffect(() => {
-    if (isPlaylist && id) {
-      // Format: playlist-{playlistId}-{index}
-      // We can't easily fetch from here without user context, so show basic player
-      setPlaylistChannel(null);
-    }
-  }, [id, isPlaylist]);
 
   const channel = useMemo(() => {
     if (isEvent && liveEvent) {
@@ -52,7 +44,6 @@ const Watch = () => {
   const related = channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId);
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
 
-  // Auto scroll to player on mount and id change
   useEffect(() => {
     setTimeout(() => {
       playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -100,6 +91,9 @@ const Watch = () => {
             <ArrowLeft className="w-5 h-5" /><span className="text-sm">Back</span>
           </Link>
           <div className="flex gap-2">
+            <button onClick={() => setShowChat(!showChat)} className={`p-2 rounded-lg transition-all ${showChat ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}>
+              <MessageCircle className="w-5 h-5" />
+            </button>
             <button onClick={toggleFav} className={`p-2 rounded-lg transition-all ${favorited ? "text-accent glow-accent" : "text-muted-foreground hover:text-foreground"}`}>
               <Heart className={`w-5 h-5 ${favorited ? "fill-current" : ""}`} />
             </button>
@@ -135,8 +129,15 @@ const Watch = () => {
           {sameCategory && <span className="text-xs text-primary mt-1 inline-block">{sameCategory.icon} {sameCategory.name}</span>}
         </div>
 
+        {/* Channel Chat Panel */}
+        {showChat && (
+          <div className="glass-card rounded-xl overflow-hidden" style={{ height: "400px" }}>
+            <ChatPanel channelId={channel.id} channelName={channel.name} />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PostsSection />
+          <PostsSection channelId={channel.id} />
           <PollSection />
         </div>
 

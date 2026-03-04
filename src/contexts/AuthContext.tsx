@@ -7,6 +7,7 @@ interface AuthContextType {
   user: any;
   profile: any;
   isAdmin: boolean;
+  isModerator: boolean;
   isBanned: boolean;
   loading: boolean;
   register: (name: string, phone: string, password: string) => Promise<void>;
@@ -27,7 +28,13 @@ export const AuthProvider = ({ children }: any) => {
       if (u) {
         try {
           const docSnap = await getDoc(doc(db, "users", u.uid));
-          setProfile(docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null);
+          if (docSnap.exists()) {
+            setProfile({ id: docSnap.id, ...docSnap.data() });
+            // Update lastLogin
+            setDoc(doc(db, "users", u.uid), { lastLogin: serverTimestamp() }, { merge: true }).catch(() => {});
+          } else {
+            setProfile(null);
+          }
         } catch {
           setProfile(null);
         }
@@ -40,6 +47,7 @@ export const AuthProvider = ({ children }: any) => {
   }, []);
 
   const isAdmin = profile?.role === "admin";
+  const isModerator = profile?.role === "moderator";
   const isBanned = profile?.isBanned === true;
 
   const register = async (name: string, phone: string, password: string) => {
@@ -53,6 +61,7 @@ export const AuthProvider = ({ children }: any) => {
       phone,
       role: "user",
       avatar: null,
+      badges: [],
       isBanned: false,
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp()
@@ -69,7 +78,7 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isAdmin, isBanned, loading, register, login, logout }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, isModerator, isBanned, loading, register, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
