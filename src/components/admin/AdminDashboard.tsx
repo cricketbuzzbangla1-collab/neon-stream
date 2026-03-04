@@ -10,12 +10,13 @@ import UserManager from "./UserManager";
 import ChatManager from "./ChatManager";
 import PostPollManager from "./PostPollManager";
 import AppSettingsManager from "./AppSettingsManager";
+import ReportManager from "./ReportManager";
 
 const AdminDashboard = () => {
   return (
     <Tabs defaultValue="channels" className="space-y-6">
       <TabsList className="glass-card p-1 flex flex-wrap gap-1 h-auto w-full overflow-x-auto">
-        {["channels", "playlist", "live-events", "categories", "countries", "ads", "users", "chat", "posts-polls", "app-settings", "settings"].map((t) => (
+        {["channels", "playlist", "live-events", "categories", "countries", "ads", "users", "chat", "posts-polls", "reports", "app-settings", "settings"].map((t) => (
           <TabsTrigger
             key={t}
             value={t}
@@ -34,6 +35,7 @@ const AdminDashboard = () => {
       <TabsContent value="users"><UserManager /></TabsContent>
       <TabsContent value="chat"><ChatManager /></TabsContent>
       <TabsContent value="posts-polls"><PostPollManager /></TabsContent>
+      <TabsContent value="reports"><ReportManager /></TabsContent>
       <TabsContent value="app-settings"><AppSettingsManager /></TabsContent>
       <TabsContent value="settings"><SettingsManager /></TabsContent>
     </Tabs>

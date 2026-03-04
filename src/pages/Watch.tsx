@@ -5,8 +5,9 @@ import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
 import PollSection from "@/components/PollSection";
-import { ArrowLeft, Share2, Heart } from "lucide-react";
+import { ArrowLeft, Share2, Heart, AlertTriangle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
+import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
 
 const Watch = () => {
@@ -16,6 +17,7 @@ const Watch = () => {
   const { data: categories } = useCategories();
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const [favorited, setFavorited] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
 
   const isEvent = id?.startsWith("event-");
@@ -110,6 +112,23 @@ const Watch = () => {
         <div ref={playerRef}>
           <Player channel={channel} autoPlay={true} />
         </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowReport(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-all"
+          >
+            <AlertTriangle className="w-3.5 h-3.5" /> Report Channel
+          </button>
+        </div>
+
+        <ReportChannelModal
+          channelId={channel.id}
+          channelName={channel.name}
+          streamUrl={channel.streamUrl}
+          open={showReport}
+          onClose={() => setShowReport(false)}
+        />
 
         <div className="glass-card p-4">
           <h1 className="text-xl font-display font-bold text-foreground">{channel.name}</h1>

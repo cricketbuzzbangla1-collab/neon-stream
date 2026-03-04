@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback, useMemo } from "react";
-import { useChannels, useCategories, addDocument, deleteDocument, Channel } from "@/hooks/useFirestore";
-import { Upload, Download, Trash2, Search, FileText, Check, X, AlertTriangle, Loader2 } from "lucide-react";
+import { useChannels, useCategories, useCountries, addDocument, deleteDocument, Channel } from "@/hooks/useFirestore";
+import { Upload, Download, Trash2, Search, FileText, Check, X, AlertTriangle, Loader2, Link as LinkIcon, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { collection, getDocs, query, where, writeBatch, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface ParsedChannel {
   name: string;
@@ -13,6 +15,9 @@ interface ParsedChannel {
   selected: boolean;
   isDuplicate: boolean;
   editMode: boolean;
+  countryId: string;
+  isLive: boolean;
+  status: "valid" | "invalid" | "unchecked";
 }
 
 function parseM3U8(text: string): ParsedChannel[] {
@@ -43,9 +48,12 @@ function parseM3U8(text: string): ParsedChannel[] {
       selected: true,
       isDuplicate: false,
       editMode: false,
+      countryId: "",
+      isLive: true,
+      status: "unchecked",
     });
 
-    i++; // skip URL line
+    i++;
   }
 
   return channels;
@@ -65,23 +73,45 @@ function generateM3U8(channels: Channel[], categories: { id: string; name: strin
 const PlaylistManager = () => {
   const { data: channels } = useChannels();
   const { data: categories } = useCategories();
+  const { data: countries } = useCountries();
   const [parsed, setParsed] = useState<ParsedChannel[]>([]);
   const [rawText, setRawText] = useState("");
+  const [urlInput, setUrlInput] = useState("");
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("");
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [showPaste, setShowPaste] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
+  const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [dupMode, setDupMode] = useState<"skip" | "overwrite">("skip");
+  const [removeDups, setRemoveDups] = useState(true);
+  const [exportCat, setExportCat] = useState("");
+  const [exportCountry, setExportCountry] = useState("");
+  const [validating, setValidating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const existingUrls = useMemo(() => new Set(channels.map((c) => c.streamUrl)), [channels]);
+  const existingUrlToId = useMemo(() => {
+    const map: Record<string, string> = {};
+    channels.forEach(c => { map[c.streamUrl] = c.id; });
+    return map;
+  }, [channels]);
 
   const handleParse = useCallback((text: string) => {
-    const result = parseM3U8(text);
+    let result = parseM3U8(text);
+    if (removeDups) {
+      const seen = new Set<string>();
+      result = result.filter(ch => {
+        if (seen.has(ch.streamUrl)) return false;
+        seen.add(ch.streamUrl);
+        return true;
+      });
+    }
     const marked = result.map((ch) => ({
       ...ch,
       isDuplicate: existingUrls.has(ch.streamUrl),
-      selected: !existingUrls.has(ch.streamUrl),
+      selected: dupMode === "overwrite" || !existingUrls.has(ch.streamUrl),
     }));
     setParsed(marked);
     if (marked.length === 0) {
@@ -89,7 +119,7 @@ const PlaylistManager = () => {
     } else {
       toast.success(`Parsed ${marked.length} channels (${marked.filter((c) => c.isDuplicate).length} duplicates)`);
     }
-  }, [existingUrls]);
+  }, [existingUrls, removeDups, dupMode]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -102,6 +132,22 @@ const PlaylistManager = () => {
     };
     reader.readAsText(file);
     e.target.value = "";
+  };
+
+  const handleFetchUrl = async () => {
+    if (!urlInput.trim()) { toast.error("Enter a URL"); return; }
+    setFetchingUrl(true);
+    try {
+      const resp = await fetch(urlInput.trim());
+      if (!resp.ok) throw new Error("Failed to fetch");
+      const text = await resp.text();
+      setRawText(text);
+      handleParse(text);
+      setShowUrl(false);
+    } catch {
+      toast.error("Failed to fetch playlist. Try uploading the file instead.");
+    }
+    setFetchingUrl(false);
   };
 
   const handlePasteImport = () => {
@@ -118,11 +164,15 @@ const PlaylistManager = () => {
     let success = 0;
     let failed = 0;
 
-    // Find or create category mapping
     const catMap: Record<string, string> = {};
     for (const cat of categories) {
       catMap[cat.name.toLowerCase()] = cat.id;
     }
+
+    // Batch write - max 500 per batch
+    const BATCH_SIZE = 450;
+    let batch = writeBatch(db);
+    let batchCount = 0;
 
     for (let i = 0; i < toImport.length; i++) {
       const ch = toImport[i];
@@ -131,30 +181,53 @@ const PlaylistManager = () => {
         if (ch.category) {
           categoryId = catMap[ch.category.toLowerCase()] || "";
           if (!categoryId) {
-            // Auto-create category
             const catDoc = await addDocument("categories", { name: ch.category, icon: "📺", order: 0 });
             categoryId = catDoc.id;
             catMap[ch.category.toLowerCase()] = categoryId;
           }
         }
 
-        await addDocument("channels", {
-          name: ch.name,
-          logo: ch.logo,
-          streamUrl: ch.streamUrl,
-          playerType: "hls",
-          categoryId,
-          countryId: "",
-          isFeatured: false,
-          isLive: true,
-          order: 0,
-        });
+        if (ch.isDuplicate && dupMode === "overwrite" && existingUrlToId[ch.streamUrl]) {
+          const ref = doc(db, "channels", existingUrlToId[ch.streamUrl]);
+          batch.update(ref, {
+            name: ch.name,
+            logo: ch.logo,
+            categoryId,
+            countryId: ch.countryId,
+            isLive: ch.isLive,
+            source: "playlist-import",
+          });
+        } else if (!ch.isDuplicate || dupMode === "overwrite") {
+          const ref = doc(collection(db, "channels"));
+          batch.set(ref, {
+            name: ch.name,
+            logo: ch.logo,
+            streamUrl: ch.streamUrl,
+            playerType: "hls",
+            categoryId,
+            countryId: ch.countryId,
+            isFeatured: false,
+            isLive: ch.isLive,
+            order: 0,
+            source: "playlist-import",
+            createdAt: Date.now(),
+          });
+        }
+        batchCount++;
         success++;
+
+        if (batchCount >= BATCH_SIZE) {
+          await batch.commit();
+          batch = writeBatch(db);
+          batchCount = 0;
+        }
       } catch {
         failed++;
       }
       setImportProgress(Math.round(((i + 1) / toImport.length) * 100));
     }
+
+    if (batchCount > 0) await batch.commit();
 
     setImporting(false);
     setParsed([]);
@@ -163,15 +236,38 @@ const PlaylistManager = () => {
   };
 
   const handleExport = () => {
-    const text = generateM3U8(channels, categories);
+    let exportChannels = channels;
+    if (exportCat) exportChannels = exportChannels.filter(c => c.categoryId === exportCat);
+    if (exportCountry) exportChannels = exportChannels.filter(c => c.countryId === exportCountry);
+
+    if (exportChannels.length === 0) { toast.error("No channels to export"); return; }
+    const text = generateM3U8(exportChannels, categories);
     const blob = new Blob([text], { type: "application/x-mpegURL" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "playlist.m3u8";
+    a.download = "playlist.m3u";
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${channels.length} channels`);
+    toast.success(`Exported ${exportChannels.length} channels`);
+  };
+
+  const handleValidateStreams = async () => {
+    setValidating(true);
+    const updated = [...parsed];
+    for (let i = 0; i < updated.length; i++) {
+      if (!updated[i].selected) continue;
+      try {
+        const resp = await fetch(updated[i].streamUrl, { method: "HEAD", mode: "no-cors" });
+        updated[i].status = "valid";
+      } catch {
+        updated[i].status = "invalid";
+      }
+    }
+    setParsed(updated);
+    setValidating(false);
+    const invalid = updated.filter(c => c.status === "invalid").length;
+    toast.success(`Validation done. ${invalid} invalid streams found.`);
   };
 
   const toggleAll = (val: boolean) => {
@@ -181,6 +277,12 @@ const PlaylistManager = () => {
   const setCategoryBulk = (cat: string) => {
     setParsed((prev) => prev.map((c) => (c.selected ? { ...c, category: cat } : c)));
     toast.success(`Category set to "${cat}" for selected channels`);
+  };
+
+  const setCountryBulk = (countryId: string) => {
+    setParsed((prev) => prev.map((c) => (c.selected ? { ...c, countryId } : c)));
+    const country = countries.find(c => c.id === countryId);
+    toast.success(`Country set to "${country?.name}" for selected channels`);
   };
 
   const deleteSelected = () => {
@@ -205,6 +307,8 @@ const PlaylistManager = () => {
   const selectedCount = parsed.filter((c) => c.selected).length;
   const dupCount = parsed.filter((c) => c.isDuplicate).length;
 
+  const inputCls = "px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm";
+
   return (
     <div className="space-y-4">
       {/* Action bar */}
@@ -213,13 +317,42 @@ const PlaylistManager = () => {
         <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
           <Upload className="w-4 h-4" /> Upload File
         </button>
-        <button onClick={() => setShowPaste(!showPaste)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-secondary-foreground font-medium hover:opacity-90 transition-all duration-300">
+        <button onClick={() => { setShowUrl(!showUrl); setShowPaste(false); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-secondary-foreground font-medium hover:opacity-90 transition-all duration-300">
+          <LinkIcon className="w-4 h-4" /> From URL
+        </button>
+        <button onClick={() => { setShowPaste(!showPaste); setShowUrl(false); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-secondary-foreground font-medium hover:opacity-90 transition-all duration-300">
           <FileText className="w-4 h-4" /> Paste Text
         </button>
-        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-accent-foreground font-medium hover:opacity-90 transition-all duration-300 ml-auto">
-          <Download className="w-4 h-4" /> Export ({channels.length})
-        </button>
       </div>
+
+      {/* Import options */}
+      <div className="flex flex-wrap gap-4 items-center text-sm">
+        <label className="flex items-center gap-2 text-foreground">
+          <input type="checkbox" checked={removeDups} onChange={e => setRemoveDups(e.target.checked)} className="rounded" />
+          Remove duplicates
+        </label>
+        <div className="flex items-center gap-2 text-foreground">
+          <span className="text-muted-foreground">Existing:</span>
+          <select value={dupMode} onChange={e => setDupMode(e.target.value as any)} className={`${inputCls} py-1`}>
+            <option value="skip">Skip</option>
+            <option value="overwrite">Overwrite</option>
+          </select>
+        </div>
+      </div>
+
+      {/* URL input */}
+      {showUrl && (
+        <div className="glass-card neon-border p-4 space-y-3">
+          <input value={urlInput} onChange={e => setUrlInput(e.target.value)} placeholder="https://example.com/playlist.m3u8" className={`${inputCls} w-full`} />
+          <div className="flex gap-2">
+            <button onClick={handleFetchUrl} disabled={fetchingUrl} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300 disabled:opacity-50">
+              {fetchingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Fetch & Parse
+            </button>
+            <button onClick={() => setShowUrl(false)} className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground hover:opacity-90 transition-all duration-300">Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Paste area */}
       {showPaste && (
@@ -234,9 +367,7 @@ const PlaylistManager = () => {
             <button onClick={handlePasteImport} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
               Parse Playlist
             </button>
-            <button onClick={() => { setShowPaste(false); setRawText(""); }} className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground hover:opacity-90 transition-all duration-300">
-              Cancel
-            </button>
+            <button onClick={() => { setShowPaste(false); setRawText(""); }} className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground hover:opacity-90 transition-all duration-300">Cancel</button>
           </div>
         </div>
       )}
@@ -244,7 +375,6 @@ const PlaylistManager = () => {
       {/* Parsed results */}
       {parsed.length > 0 && (
         <div className="space-y-4">
-          {/* Stats bar */}
           <div className="glass-card p-4 flex flex-wrap items-center gap-4 text-sm">
             <span className="text-foreground font-semibold">{parsed.length} channels parsed</span>
             <span className="text-primary">{selectedCount} selected</span>
@@ -253,21 +383,20 @@ const PlaylistManager = () => {
                 <AlertTriangle className="w-3.5 h-3.5" /> {dupCount} duplicates
               </span>
             )}
+            <button onClick={handleValidateStreams} disabled={validating} className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs hover:opacity-80 disabled:opacity-50">
+              {validating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              Validate Streams
+            </button>
           </div>
 
           {/* Filters & bulk actions */}
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search channels..."
-                className="w-full pl-9 pr-4 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm"
-              />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search channels..." className={`${inputCls} pl-9 w-full`} />
             </div>
             {uniqueCategories.length > 0 && (
-              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm">
+              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={inputCls}>
                 <option value="">All Categories</option>
                 {uniqueCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -279,33 +408,39 @@ const PlaylistManager = () => {
             </button>
           </div>
 
-          {/* Bulk category assign */}
-          {uniqueCategories.length > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Bulk assign category:</span>
-              {uniqueCategories.slice(0, 6).map((c) => (
-                <button key={c} onClick={() => setCategoryBulk(c)} className="px-2 py-1 rounded bg-secondary text-secondary-foreground text-xs hover:opacity-80">{c}</button>
-              ))}
-            </div>
-          )}
+          {/* Bulk assign */}
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Bulk assign:</span>
+            {uniqueCategories.slice(0, 6).map((c) => (
+              <button key={c} onClick={() => setCategoryBulk(c)} className="px-2 py-1 rounded bg-secondary text-secondary-foreground text-xs hover:opacity-80">{c}</button>
+            ))}
+            {countries.length > 0 && (
+              <select onChange={e => { if (e.target.value) setCountryBulk(e.target.value); }} className={`${inputCls} py-1 text-xs`} defaultValue="">
+                <option value="" disabled>Country...</option>
+                {countries.map(c => <option key={c.id} value={c.id}>{c.flag} {c.name}</option>)}
+              </select>
+            )}
+          </div>
 
           {/* Channel list */}
           <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
             {filtered.map((ch, idx) => {
               const realIdx = parsed.indexOf(ch);
               return (
-                <div key={realIdx} className={`glass-card p-3 flex items-center gap-3 ${ch.isDuplicate ? "border border-amber-500/30" : ""}`}>
+                <div key={realIdx} className={`glass-card p-3 flex items-center gap-3 ${ch.isDuplicate ? "border border-amber-500/30" : ""} ${ch.status === "invalid" ? "border border-destructive/30" : ""}`}>
                   <input type="checkbox" checked={ch.selected} onChange={(e) => updateParsed(realIdx, "selected", e.target.checked)} className="rounded shrink-0" />
                   {ch.logo ? (
                     <img src={ch.logo} alt="" className="w-8 h-8 rounded object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   ) : (
-                    <div className="w-8 h-8 rounded bg-secondary shrink-0" />
+                    <div className="w-8 h-8 rounded bg-secondary shrink-0 flex items-center justify-center text-xs text-muted-foreground font-bold">{ch.name.charAt(0)}</div>
                   )}
                   <div className="flex-1 min-w-0">
                     {ch.editMode ? (
                       <div className="flex flex-wrap gap-2">
-                        <input value={ch.name} onChange={(e) => updateParsed(realIdx, "name", e.target.value)} className="px-2 py-1 rounded bg-secondary border border-border text-foreground text-xs flex-1 min-w-[120px]" />
-                        <input value={ch.category} onChange={(e) => updateParsed(realIdx, "category", e.target.value)} placeholder="Category" className="px-2 py-1 rounded bg-secondary border border-border text-foreground text-xs w-24" />
+                        <input value={ch.name} onChange={(e) => updateParsed(realIdx, "name", e.target.value)} className={`${inputCls} flex-1 min-w-[120px] py-1`} />
+                        <input value={ch.logo} onChange={(e) => updateParsed(realIdx, "logo", e.target.value)} placeholder="Logo URL" className={`${inputCls} w-32 py-1`} />
+                        <input value={ch.category} onChange={(e) => updateParsed(realIdx, "category", e.target.value)} placeholder="Category" className={`${inputCls} w-24 py-1`} />
+                        <input value={ch.streamUrl} onChange={(e) => updateParsed(realIdx, "streamUrl", e.target.value)} placeholder="Stream URL" className={`${inputCls} flex-1 min-w-[150px] py-1`} />
                         <button onClick={() => updateParsed(realIdx, "editMode", false)} className="text-primary"><Check className="w-3.5 h-3.5" /></button>
                       </div>
                     ) : (
@@ -313,6 +448,8 @@ const PlaylistManager = () => {
                         <p className="text-sm font-medium text-foreground truncate">{ch.name}</p>
                         {ch.category && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">{ch.category}</span>}
                         {ch.isDuplicate && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 shrink-0">DUP</span>}
+                        {ch.status === "invalid" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive shrink-0">INVALID</span>}
+                        {ch.status === "valid" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-neon-green/10 text-neon-green shrink-0">✓</span>}
                         <button onClick={() => updateParsed(realIdx, "editMode", true)} className="text-muted-foreground hover:text-foreground ml-auto shrink-0">
                           <FileText className="w-3 h-3" />
                         </button>
@@ -344,11 +481,31 @@ const PlaylistManager = () => {
         </div>
       )}
 
-      {/* Existing channels info */}
+      {/* Export section */}
+      <div className="glass-card neon-border p-4 space-y-3">
+        <h3 className="font-display font-bold text-foreground text-sm">Export Channels</h3>
+        <div className="flex flex-wrap gap-2 items-center">
+          <select value={exportCat} onChange={e => setExportCat(e.target.value)} className={inputCls}>
+            <option value="">All Categories</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select value={exportCountry} onChange={e => setExportCountry(e.target.value)} className={inputCls}>
+            <option value="">All Countries</option>
+            {countries.map(c => <option key={c.id} value={c.id}>{c.flag} {c.name}</option>)}
+          </select>
+          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-accent-foreground font-medium hover:opacity-90 transition-all duration-300">
+            <Download className="w-4 h-4" /> Export .m3u ({
+              channels.filter(c => (!exportCat || c.categoryId === exportCat) && (!exportCountry || c.countryId === exportCountry)).length
+            })
+          </button>
+        </div>
+      </div>
+
+      {/* Empty state */}
       {parsed.length === 0 && (
         <div className="glass-card p-8 text-center space-y-2">
           <Upload className="w-10 h-10 mx-auto text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">Upload a .m3u8 file or paste playlist text to import channels</p>
+          <p className="text-sm text-muted-foreground">Upload .m3u/.m3u8 file, paste URL, or paste text to import channels</p>
           <p className="text-xs text-muted-foreground">{channels.length} channels currently in database</p>
         </div>
       )}

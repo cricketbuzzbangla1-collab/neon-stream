@@ -67,6 +67,9 @@ export interface Ad {
 export interface AppSettings {
   telegramUrl: string;
   notice: string;
+  noticeEnabled: boolean;
+  noticeType: "info" | "warning" | "success";
+  noticeLink: string;
   defaultTheme: string;
   adsEnabled: boolean;
   siteName: string;
@@ -122,9 +125,9 @@ export function useSettings() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "settings"), (snap) => {
-      if (snap.docs.length > 0) {
-        setSettings({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
+    const unsub = onSnapshot(doc(db, "appSettings", "main"), (snap) => {
+      if (snap.exists()) {
+        setSettings({ id: snap.id, ...snap.data() } as any);
       }
       setLoading(false);
     });
