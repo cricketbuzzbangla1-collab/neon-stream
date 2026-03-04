@@ -57,17 +57,18 @@ const MyPlaylist = () => {
 
   const handleChannelPlay = useCallback((channel: PlaylistChannel, playlistId: string, index: number) => {
     if (isMobile) {
-      // Open native player on mobile
+      // Try native player first, fallback to in-app player
       const url = channel.streamUrl;
       try {
         window.open(url, "_blank");
         toast.success(`Playing: ${channel.name}`);
       } catch {
-        toast.error("Failed to open native player");
+        // Fallback to in-app playlist player
+        navigate(`/playlist/${playlistId}/${index}`);
       }
     } else {
-      // Desktop: navigate to watch page
-      navigate(`/watch/playlist-${playlistId}-${index}`);
+      // Desktop: navigate to dedicated playlist player
+      navigate(`/playlist/${playlistId}/${index}`);
     }
   }, [isMobile, navigate]);
 
