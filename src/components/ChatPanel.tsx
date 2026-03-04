@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   collection, query, orderBy, limit, onSnapshot,
-  addDoc, updateDoc, deleteDoc, doc, where,
+  writeBatch, doc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,7 +30,7 @@ interface ChatPanelProps {
 }
 
 const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, isModerator } = useAuth();
   const { settings } = useAppSettings();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -39,12 +39,15 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Always use single global chat collection
-  const chatCollection = "globalChat";
+  // Unified feed read/write source
+  const globalChatCollection = "globalChat";
+  const getGlobalChatDocRef = (messageId: string) => doc(db, globalChatCollection, messageId);
+  const getChannelChatDocRef = (targetChannelId: string, messageId: string) =>
+    doc(db, "channels", targetChannelId, "messages", messageId);
 
   useEffect(() => {
     const q = query(
-      collection(db, chatCollection),
+      collection(db, globalChatCollection),
       orderBy("createdAt", "desc"),
       limit(50)
     );
@@ -57,7 +60,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
     return unsub;
-  }, [chatCollection]);
+  }, [globalChatCollection]);
 
   const handleSend = useCallback(async () => {
     if (!user || !profile) return toast.error("Login to chat");
@@ -75,7 +78,9 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
     setSending(true);
     const badges = getAutoBadges(profile);
     const filteredMsg = filterBadWords(input.trim(), settings.badWordFilterEnabled);
-    const msgData = {
+    const messageId = doc(collection(db, globalChatCollection)).id;
+    const msgData: ChatMessage = {
+      id: messageId,
       userId: user.uid,
       userName: profile.name,
       message: filteredMsg,
@@ -87,7 +92,14 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
     };
 
     try {
-      await addDoc(collection(db, "globalChat"), msgData);
+      const batch = writeBatch(db);
+      batch.set(getGlobalChatDocRef(messageId), msgData);
+
+      if (channelId && channelId !== "global") {
+        batch.set(getChannelChatDocRef(channelId, messageId), msgData);
+      }
+
+      await batch.commit();
       setInput("");
       setLastSent(Date.now());
     } catch {
@@ -95,18 +107,36 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
     } finally {
       setSending(false);
     }
-  }, [user, profile, input, settings, lastSent, channelId]);
+  }, [user, profile, input, settings, lastSent, channelId, globalChatCollection]);
 
   const handleLike = async (msg: ChatMessage) => {
     if (!user) return;
+
     const newLikes = msg.likes?.includes(user.uid)
       ? msg.likes.filter((id) => id !== user.uid)
       : [...(msg.likes || []), user.uid];
-    await updateDoc(doc(db, chatCollection, msg.id), { likes: newLikes });
+
+    const batch = writeBatch(db);
+    batch.set(getGlobalChatDocRef(msg.id), { likes: newLikes }, { merge: true });
+
+    if (msg.channelId && msg.channelId !== "global") {
+      batch.set(getChannelChatDocRef(msg.channelId, msg.id), { likes: newLikes }, { merge: true });
+    }
+
+    await batch.commit();
   };
 
   const handleDelete = async (msg: ChatMessage) => {
-    await updateDoc(doc(db, chatCollection, msg.id), { isDeleted: true });
+    if (!isAdmin && !isModerator && msg.userId !== user?.uid) return;
+
+    const batch = writeBatch(db);
+    batch.set(getGlobalChatDocRef(msg.id), { isDeleted: true }, { merge: true });
+
+    if (msg.channelId && msg.channelId !== "global") {
+      batch.set(getChannelChatDocRef(msg.channelId, msg.id), { isDeleted: true }, { merge: true });
+    }
+
+    await batch.commit();
     toast.success("Message deleted");
   };
 
@@ -164,7 +194,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
                 />
                 {msg.likes?.length || 0}
               </button>
-              {(isAdmin || msg.userId === user?.uid) && (
+              {(isAdmin || isModerator || msg.userId === user?.uid) && (
                 <button
                   onClick={() => handleDelete(msg)}
                   className="text-[10px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-0.5"
