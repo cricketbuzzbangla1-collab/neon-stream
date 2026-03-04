@@ -41,9 +41,22 @@ const SettingsManager = () => {
 
   const handleSave = async () => {
     try {
-      await setDoc(doc(db, "appSettings", "main"), { ...form, updatedAt: Date.now() }, { merge: true });
+      const payload = {
+        siteName: form.siteName,
+        logo: form.logo,
+        telegramUrl: form.telegramUrl,
+        noticeBarEnabled: form.noticeBarEnabled,
+        noticeText: form.noticeText,
+        noticeType: form.noticeType,
+        noticeLink: form.noticeLink,
+        defaultTheme: form.defaultTheme,
+        adsEnabled: form.adsEnabled,
+        updatedAt: Date.now(),
+      };
+      await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
       toast.success("Settings saved");
     } catch (err: any) {
+      console.error("Settings save error:", err);
       toast.error("Error saving: " + (err?.message || "Unknown"));
     }
   };
@@ -76,12 +89,12 @@ const SettingsManager = () => {
       <div className="space-y-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
         <h4 className="text-sm font-semibold text-foreground">📢 Notice Bar</h4>
         <label className="flex items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" checked={form.noticeEnabled} onChange={(e) => setForm({ ...form, noticeEnabled: e.target.checked })} className="rounded" />
+          <input type="checkbox" checked={form.noticeBarEnabled} onChange={(e) => setForm({ ...form, noticeBarEnabled: e.target.checked })} className="rounded" />
           Enable Notice Bar
         </label>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Notice Text</label>
-          <textarea value={form.notice} onChange={(e) => setForm({ ...form, notice: e.target.value })} className={`${inputCls} min-h-[60px] resize-y`} placeholder="Enter notice text..." />
+          <textarea value={form.noticeText} onChange={(e) => setForm({ ...form, noticeText: e.target.value })} className={`${inputCls} min-h-[60px] resize-y`} placeholder="Enter notice text..." />
         </div>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Notice Type</label>
