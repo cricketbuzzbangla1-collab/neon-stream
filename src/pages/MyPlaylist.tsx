@@ -55,22 +55,20 @@ const MyPlaylist = () => {
   const [importing, setImporting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const handleChannelPlay = useCallback((channel: PlaylistChannel, playlistId: string, index: number) => {
-    if (isMobile) {
-      // Try native player first, fallback to in-app player
-      const url = channel.streamUrl;
-      try {
+  const handleChannelPlay = useCallback((channel: PlaylistChannel) => {
+    const url = channel.streamUrl;
+    try {
+      if (/Android/i.test(navigator.userAgent)) {
+        window.location.href = `intent:${url}#Intent;type=video/*;end`;
+      } else {
         window.open(url, "_blank");
-        toast.success(`Playing: ${channel.name}`);
-      } catch {
-        // Fallback to in-app playlist player
-        navigate(`/playlist/${playlistId}/${index}`);
       }
-    } else {
-      // Desktop: navigate to dedicated playlist player
-      navigate(`/playlist/${playlistId}/${index}`);
+      toast.success(`Opening: ${channel.name}`);
+    } catch {
+      window.open(url, "_blank");
+      toast.info("Opening stream link...");
     }
-  }, [isMobile, navigate]);
+  }, []);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
