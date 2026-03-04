@@ -9,7 +9,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { getAutoBadges } from "@/lib/badges";
 import { filterBadWords } from "@/lib/chatFilter";
 import UserBadges from "@/components/UserBadges";
-import { Send, Heart, Trash2, MessageCircle, Globe, Hash } from "lucide-react";
+import { Send, Heart, Trash2, MessageCircle, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 interface ChatMessage {
@@ -25,7 +25,7 @@ interface ChatMessage {
 }
 
 interface ChatPanelProps {
-  channelId?: string; // if provided, show channel chat; otherwise global
+  channelId?: string;
   channelName?: string;
 }
 
@@ -36,14 +36,11 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [lastSent, setLastSent] = useState(0);
-  const [viewMode, setViewMode] = useState<"global" | "channel">(channelId ? "channel" : "global");
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Collection path
-  const chatCollection = viewMode === "channel" && channelId
-    ? `channels/${channelId}/messages`
-    : "globalChat";
+  // Always use single global chat collection
+  const chatCollection = "globalChat";
 
   useEffect(() => {
     const q = query(
@@ -90,15 +87,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
     };
 
     try {
-      // Write to channel chat
-      if (channelId && viewMode === "channel") {
-        await addDoc(collection(db, `channels/${channelId}/messages`), msgData);
-        // Mirror to global chat
-        await addDoc(collection(db, "globalChat"), msgData);
-      } else {
-        // Direct to global
-        await addDoc(collection(db, "globalChat"), msgData);
-      }
+      await addDoc(collection(db, "globalChat"), msgData);
       setInput("");
       setLastSent(Date.now());
     } catch {
@@ -106,7 +95,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
     } finally {
       setSending(false);
     }
-  }, [user, profile, input, settings, lastSent, channelId, viewMode]);
+  }, [user, profile, input, settings, lastSent, channelId]);
 
   const handleLike = async (msg: ChatMessage) => {
     if (!user) return;
@@ -130,33 +119,11 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tab switcher if channel context */}
-      {channelId && (
-        <div className="flex border-b border-border/30 shrink-0">
-          <button
-            onClick={() => setViewMode("channel")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
-              viewMode === "channel"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Hash className="w-3.5 h-3.5" />
-            {channelName || "Channel"}
-          </button>
-          <button
-            onClick={() => setViewMode("global")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
-              viewMode === "global"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            Global
-          </button>
-        </div>
-      )}
+      {/* Global Chat Header */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30 shrink-0">
+        <Globe className="w-3.5 h-3.5 text-primary" />
+        <span className="text-xs font-medium text-foreground">Global Chat</span>
+      </div>
 
       {/* Messages */}
       <div ref={containerRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-2 min-h-0">
@@ -175,7 +142,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-bold text-primary">{msg.userName}</span>
               <UserBadges badges={(msg.badges || []) as any} />
-              {msg.channelId && msg.channelId !== "global" && viewMode === "global" && (
+              {msg.channelId && msg.channelId !== "global" && (
                 <span className="text-[9px] px-1 py-0 rounded bg-secondary text-muted-foreground">
                   #{msg.channelId.slice(0, 8)}
                 </span>
