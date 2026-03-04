@@ -48,11 +48,7 @@ const PostsSection = ({ channelId }: PostsSectionProps) => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(20));
     const unsub = onSnapshot(q, (snap) => {
       const allPosts = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post));
-      // Filter by channelId if provided
-      const filtered = channelId
-        ? allPosts.filter(p => p.channelId === channelId || !p.channelId)
-        : allPosts;
-      setPosts(filtered);
+      setPosts(allPosts);
       setLoading(false);
     });
     return unsub;
