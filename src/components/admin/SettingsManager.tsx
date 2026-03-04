@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
-import { useSettings, addDocument, updateDocument } from "@/hooks/useFirestore";
-import { collection, getDocs } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
 
 const SettingsManager = () => {
-  const { settings, loading } = useSettings();
   const [form, setForm] = useState({
     siteName: "LiveTV",
     logo: "",
@@ -15,37 +13,40 @@ const SettingsManager = () => {
     defaultTheme: "dark-neon",
     adsEnabled: false,
   });
-  const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (settings) {
-      setForm({
-        siteName: (settings as any).siteName || "LiveTV",
-        logo: (settings as any).logo || "",
-        telegramUrl: (settings as any).telegramUrl || "",
-        notice: (settings as any).notice || "",
-        defaultTheme: (settings as any).defaultTheme || "dark-neon",
-        adsEnabled: (settings as any).adsEnabled || false,
-      });
-      setSettingsId((settings as any).id);
-    }
-  }, [settings]);
+    const unsub = onSnapshot(doc(db, "appSettings", "main"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setForm({
+          siteName: data.siteName || "LiveTV",
+          logo: data.logo || "",
+          telegramUrl: data.telegramUrl || "",
+          notice: data.notice || "",
+          defaultTheme: data.defaultTheme || "dark-neon",
+          adsEnabled: data.adsEnabled || false,
+        });
+      }
+      setLoading(false);
+    });
+    return unsub;
+  }, []);
 
   const handleSave = async () => {
     try {
-      if (settingsId) {
-        await updateDocument("settings", settingsId, form);
-      } else {
-        const doc = await addDocument("settings", form);
-        setSettingsId(doc.id);
-      }
+      await setDoc(doc(db, "appSettings", "main"), { ...form, updatedAt: Date.now() }, { merge: true });
       toast.success("Settings saved");
-    } catch { toast.error("Error saving"); }
+    } catch (err: any) {
+      toast.error("Error saving: " + (err?.message || "Unknown"));
+    }
   };
+
+  if (loading) return <div className="glass-card p-6"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>;
 
   return (
     <div className="glass-card neon-border p-6 space-y-4 max-w-lg">
-      <h3 className="font-display font-bold text-foreground">App Settings</h3>
+      <h3 className="font-display font-bold text-foreground">Site Settings</h3>
       <div className="space-y-4">
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Site Name</label>

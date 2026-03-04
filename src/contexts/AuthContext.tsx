@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { auth, db } from "@/firebase/config";
+import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
 interface AuthContextType {
   user: any;
   profile: any;
+  isAdmin: boolean;
+  isBanned: boolean;
+  loading: boolean;
   register: (name: string, phone: string, password: string) => Promise<void>;
   login: (phone: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -16,22 +19,31 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: any) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        const docSnap = await doc(db, "users", u.uid).get();
-        setProfile(docSnap.data());
+        try {
+          const docSnap = await getDoc(doc(db, "users", u.uid));
+          setProfile(docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null);
+        } catch {
+          setProfile(null);
+        }
       } else {
         setProfile(null);
       }
+      setLoading(false);
     });
     return unsubscribe;
   }, []);
 
+  const isAdmin = profile?.role === "admin";
+  const isBanned = profile?.isBanned === true;
+
   const register = async (name: string, phone: string, password: string) => {
-    const email = `${phone}@dummy.com`;
+    const email = `${phone}@abctv.app`;
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const u = userCredential.user;
 
@@ -48,7 +60,7 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   const login = async (phone: string, password: string) => {
-    const email = `${phone}@dummy.com`;
+    const email = `${phone}@abctv.app`;
     await signInWithEmailAndPassword(auth, email, password);
   };
 
@@ -57,7 +69,7 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, register, login, logout }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, isBanned, loading, register, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

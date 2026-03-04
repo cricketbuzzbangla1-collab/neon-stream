@@ -5,13 +5,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import GlobalChat from "@/components/GlobalChat";
 import Index from "./pages/Index";
 import Watch from "./pages/Watch";
 import Search from "./pages/Search";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import MyPlaylist from "./pages/MyPlaylist";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,9 +31,9 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/my-playlist" element={<MyPlaylist />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-            <GlobalChat />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
