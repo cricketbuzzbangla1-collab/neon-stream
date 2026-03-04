@@ -1,45 +1,172 @@
 rules_version = '2';
+
 service cloud.firestore {
+
   match /databases/{database}/documents {
+
+    // --------------------
+    // HELPER FUNCTIONS
+    // --------------------
+
     function isLoggedIn() {
       return request.auth != null;
     }
 
     function isAdmin() {
-      return isLoggedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
-    // Unified global chat feed (all pages/channels read from here)
+    function isModerator() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "moderator";
+    }
+
+    function isAdminOrMod() {
+      return isAdmin() || isModerator();
+    }
+
+    // --------------------
+    // USERS
+    // --------------------
+
+    match /users/{userId} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if isLoggedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+
+      // USER PLAYLISTS
+      match /playlists/{playlistId} {
+        allow read, write: if isLoggedIn() && request.auth.uid == userId;
+      }
+
+      // USER THEMES
+      match /theme/{themeId} {
+        allow read: if isLoggedIn();
+        allow write: if isLoggedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // --------------------
+    // CHANNELS
+    // --------------------
+
+    match /channels/{channelId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+
+      // CHANNEL CHAT MIRROR (same message ID as globalChat)
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create, update: if isLoggedIn();
+        allow delete: if isAdminOrMod();
+      }
+    }
+
+    // --------------------
+    // LIVE EVENTS
+    // --------------------
+
+    match /liveEvents/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --------------------
+    // CATEGORIES
+    // --------------------
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --------------------
+    // COUNTRIES
+    // --------------------
+
+    match /countries/{countryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --------------------
+    // GLOBAL CHAT (ALL CHANNELS SHARE SAME CHAT)
+    // Code writes to collection("globalChat") → docs at /globalChat/{messageId}
+    // --------------------
+
     match /globalChat/{messageId} {
       allow read: if true;
-      allow create, update: if isLoggedIn();
-      allow delete: if isAdmin();
+
+      allow create: if isLoggedIn()
+        && request.resource.data.keys().hasAll([
+          "id","userId","userName","message","channelId","createdAt","likes","badges","isDeleted"
+        ])
+        && request.resource.data.id is string
+        && request.resource.data.userId is string
+        && request.resource.data.userName is string
+        && request.resource.data.message is string
+        && request.resource.data.channelId is string
+        && request.resource.data.createdAt is number
+        && request.resource.data.likes is list
+        && request.resource.data.badges is list
+        && request.resource.data.isDeleted is bool;
+
+      allow update: if isLoggedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likes","isDeleted"]);
+
+      allow delete: if isAdminOrMod();
     }
 
-    // Optional channel-local mirror feed (same message ID as global)
-    match /channels/{channelId}/messages/{messageId} {
-      allow read: if true;
-      allow create, update: if isLoggedIn();
-      allow delete: if isAdmin();
-    }
+    // --------------------
+    // POSTS
+    // --------------------
 
-    // Unified global posts feed
     match /posts/{postId} {
       allow read: if true;
-      allow create, update: if isLoggedIn();
+      allow create: if isLoggedIn();
+      allow update: if isLoggedIn();
+      allow delete: if isAdminOrMod();
+    }
+
+    // --------------------
+    // POLLS
+    // --------------------
+
+    match /polls/{pollId} {
+      allow read: if true;
+      allow create: if isLoggedIn();
+      allow update: if isLoggedIn();
       allow delete: if isAdmin();
     }
 
-    // Channels are read-only for non-admins
-    match /channels/{channelId} {
+    // --------------------
+    // ADS
+    // --------------------
+
+    match /ads/{adId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --------------------
+    // APP SETTINGS
+    // --------------------
+
+    match /appSettings/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Default deny for everything else
-    match /{document=**} {
-      allow read, write: if false;
+    // --------------------
+    // CHANNEL REPORTS
+    // --------------------
+
+    match /channelReports/{reportId} {
+      allow create: if isLoggedIn();
+      allow read, update, delete: if isAdmin();
     }
+
   }
 }
