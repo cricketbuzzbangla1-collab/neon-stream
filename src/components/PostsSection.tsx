@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc, doc, startAfter, getDocs, QueryDocumentSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -74,7 +74,6 @@ const PostsSection = () => {
         📝 Community Posts
       </h3>
 
-      {/* New post */}
       {user && !isBanned && (
         <div className="glass-card p-3 space-y-2">
           <textarea
@@ -99,7 +98,6 @@ const PostsSection = () => {
         </div>
       )}
 
-      {/* Posts list */}
       <div className="space-y-3">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (

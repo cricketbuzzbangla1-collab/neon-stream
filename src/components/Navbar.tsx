@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Send, Palette, User, LogOut } from "lucide-react";
+import { Home, Search, ListMusic, Palette, User, LogOut, Send } from "lucide-react";
 import { useTheme, ThemeType } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
@@ -14,14 +14,14 @@ const themes: { value: ThemeType; label: string; icon: string }[] = [
 const Navbar = () => {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { user, profile, logout } = useAuth();
+  const { user, profile, isAdmin, logout } = useAuth();
   const [showThemes, setShowThemes] = useState(false);
   const [showUser, setShowUser] = useState(false);
 
   const navItems = [
     { to: "/", icon: Home, label: "Home" },
     { to: "/search", icon: Search, label: "Search" },
-    { to: "https://t.me/your_channel", icon: Send, label: "Telegram", external: true },
+    { to: "/my-playlist", icon: ListMusic, label: "My Playlist" },
   ];
 
   return (
@@ -34,7 +34,11 @@ const Navbar = () => {
               Abc<span className="text-primary">TV</span> <span className="text-primary">LIVE</span>
             </span>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {/* Telegram */}
+            <a href="https://t.me/abctvlive" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-secondary transition-all">
+              <Send className="w-5 h-5 text-muted-foreground" />
+            </a>
             {/* Theme */}
             <div className="relative">
               <button onClick={() => { setShowThemes(!showThemes); setShowUser(false); }} className="p-2 rounded-lg hover:bg-secondary transition-all">
@@ -63,7 +67,7 @@ const Navbar = () => {
                 {showUser && (
                   <div className="absolute right-0 top-12 glass-card neon-border p-2 min-w-[160px] z-50">
                     <p className="px-3 py-1 text-xs text-muted-foreground">{profile.phone}</p>
-                    {profile.role === "admin" && (
+                    {isAdmin && (
                       <Link to="/admin" onClick={() => setShowUser(false)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-secondary text-foreground">
                         ⚙️ Admin Panel
                       </Link>
@@ -87,15 +91,6 @@ const Navbar = () => {
       <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-border/30 md:hidden">
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => {
-            if (item.external) {
-              return (
-                <a key={item.label} href={item.to} target="_blank" rel="noopener noreferrer"
-                  className="flex flex-col items-center gap-1 px-4 py-2 text-muted-foreground transition-all">
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">{item.label}</span>
-                </a>
-              );
-            }
             const active = location.pathname === item.to;
             return (
               <Link key={item.to} to={item.to}

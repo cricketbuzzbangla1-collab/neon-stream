@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore";
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
@@ -6,19 +6,33 @@ import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
 import PollSection from "@/components/PollSection";
 import { ArrowLeft, Share2, Heart } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 const Watch = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: channels, loading } = useChannels();
   const { data: categories } = useCategories();
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const [favorited, setFavorited] = useState(false);
+  const playerRef = useRef<HTMLDivElement>(null);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
   const liveEvent = isEvent ? liveEvents.find((e) => e.id === eventId) : null;
+
+  // Playlist channel support
+  const isPlaylist = id?.startsWith("playlist-");
+  const [playlistChannel, setPlaylistChannel] = useState<any>(null);
+
+  useEffect(() => {
+    if (isPlaylist && id) {
+      // Format: playlist-{playlistId}-{index}
+      // We can't easily fetch from here without user context, so show basic player
+      setPlaylistChannel(null);
+    }
+  }, [id, isPlaylist]);
 
   const channel = useMemo(() => {
     if (isEvent && liveEvent) {
@@ -35,6 +49,17 @@ const Watch = () => {
 
   const related = channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId);
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
+
+  // Auto scroll to player on mount and id change
+  useEffect(() => {
+    setTimeout(() => {
+      playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+  }, [id]);
+
+  const handleRelatedClick = (channelId: string) => {
+    navigate(`/watch/${channelId}`, { replace: true });
+  };
 
   const handleShare = async () => {
     try { await navigator.share({ title: channel?.name, url: window.location.href }); }
@@ -82,14 +107,15 @@ const Watch = () => {
           </div>
         </div>
 
-        <Player channel={channel} />
+        <div ref={playerRef}>
+          <Player channel={channel} autoPlay={true} />
+        </div>
 
         <div className="glass-card p-4">
           <h1 className="text-xl font-display font-bold text-foreground">{channel.name}</h1>
           {sameCategory && <span className="text-xs text-primary mt-1 inline-block">{sameCategory.icon} {sameCategory.name}</span>}
         </div>
 
-        {/* Social Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PostsSection />
           <PollSection />
@@ -99,7 +125,11 @@ const Watch = () => {
           <div>
             <h2 className="text-lg font-display font-bold text-foreground mb-4">Related Channels</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {related.map((ch) => <ChannelCard key={ch.id} channel={ch} />)}
+              {related.map((ch) => (
+                <div key={ch.id} onClick={() => handleRelatedClick(ch.id)} className="cursor-pointer">
+                  <ChannelCard channel={ch} />
+                </div>
+              ))}
             </div>
           </div>
         )}
