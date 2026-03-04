@@ -81,7 +81,7 @@ const ChannelManager = () => {
               <option value="native">Native</option>
               <option value="iframe">Iframe</option>
               <option value="hls-retry">HLS Aggressive</option>
-              <option value="custom">Custom (M3U8 Offline-Ready)</option>
+              <option value="external">External Mobile Player (HTTP M3U8)</option>
             </select>
             <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground text-sm">
               <option value="">Select Category</option>
