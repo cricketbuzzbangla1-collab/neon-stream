@@ -20,7 +20,7 @@ const GlobalChat = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const q = query(collection(db, "globalChat"), orderBy("createdAt","desc"), limit(50));
+    const q = query(collection(db, "globalChat", "messages"), orderBy("createdAt","desc"), limit(50));
     const unsub = onSnapshot(q, snap => {
       const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
       setMessages(msgs);
@@ -35,7 +35,7 @@ const GlobalChat = () => {
 
     setSending(true);
     try {
-      await addDoc(collection(db, "globalChat"), {
+      await addDoc(collection(db, "globalChat", "messages"), {
         userId: user.uid,
         userName: profile.name,
         message: filterBadWords(input.trim()),
@@ -56,11 +56,11 @@ const GlobalChat = () => {
     const newLikes = msg.likes?.includes(user.uid)
       ? msg.likes.filter((id: string) => id !== user.uid)
       : [...(msg.likes || []), user.uid];
-    await updateDoc(doc(db, "globalChat", msg.id), { likes: newLikes });
+    await updateDoc(doc(db, "globalChat", "messages", msg.id), { likes: newLikes });
   };
 
   const handleDelete = async (msg: any) => {
-    await updateDoc(doc(db, "globalChat", msg.id), { isDeleted: true });
+    await updateDoc(doc(db, "globalChat", "messages", msg.id), { isDeleted: true });
   };
 
   // This component is now hidden from homepage but kept for potential re-use

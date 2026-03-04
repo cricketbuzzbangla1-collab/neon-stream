@@ -21,7 +21,7 @@ const ChatManager = () => {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, "globalChat"), orderBy("createdAt", "desc"), limit(50));
+    const q = query(collection(db, "globalChat", "messages"), orderBy("createdAt", "desc"), limit(50));
     const unsub = onSnapshot(q, (snap) => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMsg)).filter(m => !m.isDeleted));
     });
@@ -44,13 +44,13 @@ const ChatManager = () => {
   };
 
   const deleteMsg = async (id: string) => {
-    await updateDoc(doc(db, "globalChat", id), { isDeleted: true });
+    await updateDoc(doc(db, "globalChat", "messages", id), { isDeleted: true });
     toast.success("Deleted");
   };
 
   const clearAll = async () => {
     if (!confirm("Clear all chat history?")) return;
-    const snap = await getDocs(collection(db, "globalChat"));
+    const snap = await getDocs(collection(db, "globalChat", "messages"));
     const batch = writeBatch(db);
     snap.docs.forEach(d => batch.update(d.ref, { isDeleted: true }));
     await batch.commit();
