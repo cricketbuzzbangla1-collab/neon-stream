@@ -143,6 +143,7 @@ const LiveEventManager = () => {
               <option value="native">Native</option>
               <option value="iframe">Iframe</option>
               <option value="hls-retry">HLS Aggressive</option>
+              <option value="external">External Mobile Player</option>
             </select>
             <select value={form.countryId} onChange={(e) => setForm({ ...form, countryId: e.target.value })} className={inputCls}>
               <option value="">Select Country</option>
