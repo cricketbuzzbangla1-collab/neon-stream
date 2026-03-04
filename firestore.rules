@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Unified global chat feed (all pages/channels read from here)
+    match /globalChat/{messageId} {
+      allow read: if true;
+      allow create, update: if isLoggedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Optional channel-local mirror feed (same message ID as global)
+    match /channels/{channelId}/messages/{messageId} {
+      allow read: if true;
+      allow create, update: if isLoggedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Unified global posts feed
+    match /posts/{postId} {
+      allow read: if true;
+      allow create, update: if isLoggedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Channels are read-only for non-admins
+    match /channels/{channelId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
