@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 import { ListMusic, Upload, Link2, Trash2, Play, Plus, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PlaylistChannel {
   name: string;
@@ -45,6 +46,7 @@ function parseM3U(content: string): PlaylistChannel[] {
 const MyPlaylist = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -52,6 +54,22 @@ const MyPlaylist = () => {
   const [m3uUrl, setM3uUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const handleChannelPlay = useCallback((channel: PlaylistChannel, playlistId: string, index: number) => {
+    if (isMobile) {
+      // Open native player on mobile
+      const url = channel.streamUrl;
+      try {
+        window.open(url, "_blank");
+        toast.success(`Playing: ${channel.name}`);
+      } catch {
+        toast.error("Failed to open native player");
+      }
+    } else {
+      // Desktop: navigate to watch page
+      navigate(`/watch/playlist-${playlistId}-${index}`);
+    }
+  }, [isMobile, navigate]);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -204,7 +222,7 @@ const MyPlaylist = () => {
                     {pl.channels?.map((ch, i) => (
                       <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/50 transition-colors border-b border-border/10 last:border-0">
                         {ch.logo ? (
-                          <img src={ch.logo} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                          <img src={ch.logo} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" loading="lazy" />
                         ) : (
                           <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                             <span className="text-xs font-bold text-muted-foreground">{ch.name.charAt(0)}</span>
@@ -214,9 +232,12 @@ const MyPlaylist = () => {
                           <p className="text-sm font-medium text-foreground truncate">{ch.name}</p>
                           <p className="text-[10px] text-muted-foreground">{ch.group}</p>
                         </div>
-                        <Link to={`/watch/playlist-${pl.id}-${i}`} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                        <button
+                          onClick={() => handleChannelPlay(ch, pl.id, i)}
+                          className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
                           <Play className="w-3.5 h-3.5" />
-                        </Link>
+                        </button>
                       </div>
                     ))}
                   </div>
