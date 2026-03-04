@@ -106,48 +106,46 @@ const Watch = () => {
         </div>
 
         <div ref={playerRef}>
-          {channel.playerType === "external" && isMobile ? (
-            <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-4 p-6">
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-display font-bold text-foreground">{channel.name}</h3>
-                <p className="text-sm text-muted-foreground">This channel uses an external player for the best mobile experience.</p>
-              </div>
-              <button
-                onClick={() => {
-                  const url = channel.streamUrl;
-                  // Try intent:// for Android first
-                  const intentUrl = `intent:${url}#Intent;type=video/*;end`;
-                  const vlcUrl = `vlc://${url}`;
-
-                  try {
-                    // Try Android intent first
-                    if (/Android/i.test(navigator.userAgent)) {
-                      window.location.href = intentUrl;
-                    } else {
-                      // iOS / fallback: open directly
-                      window.open(url, "_blank");
-                    }
-                    setExternalLaunched(true);
-                    toast.success("Opening in external player...");
-                  } catch {
-                    // Fallback: open URL directly
-                    window.open(url, "_blank");
-                    toast.info("Opening stream link...");
-                  }
-                }}
-                className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition-all animate-pulse"
-              >
-                ▶ Open in External Player
-              </button>
-              {externalLaunched && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Stream opened. If no app launched, install VLC or MX Player.
-                </p>
-              )}
-            </div>
-          ) : (
-            <Player channel={channel} autoPlay={true} />
-          )}
+          {(() => {
+            const isHttpM3u8 = /\.m3u8?(\?|$)/i.test(channel.streamUrl) || channel.playerType === "external";
+            if (isHttpM3u8 && isMobile) {
+              return (
+                <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-4 p-6">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-display font-bold text-foreground">{channel.name}</h3>
+                    <p className="text-sm text-muted-foreground">This channel uses an external player for the best mobile experience.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const url = channel.streamUrl;
+                      const intentUrl = `intent:${url}#Intent;type=video/*;end`;
+                      try {
+                        if (/Android/i.test(navigator.userAgent)) {
+                          window.location.href = intentUrl;
+                        } else {
+                          window.open(url, "_blank");
+                        }
+                        setExternalLaunched(true);
+                        toast.success("Opening in external player...");
+                      } catch {
+                        window.open(url, "_blank");
+                        toast.info("Opening stream link...");
+                      }
+                    }}
+                    className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition-all animate-pulse"
+                  >
+                    ▶ Open in External Player
+                  </button>
+                  {externalLaunched && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Stream opened. If no app launched, install VLC or MX Player.
+                    </p>
+                  )}
+                </div>
+              );
+            }
+            return <Player channel={channel} autoPlay={true} />;
+          })()}
         </div>
 
         <div className="flex items-center justify-between">
