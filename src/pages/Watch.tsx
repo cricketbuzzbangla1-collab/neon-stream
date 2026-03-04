@@ -1,7 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore";
 import Player from "@/components/Player";
-import PlaylistPlayer from "@/components/PlaylistPlayer";
 import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
@@ -21,7 +20,9 @@ const Watch = () => {
   const [favorited, setFavorited] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [externalLaunched, setExternalLaunched] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
+  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
@@ -105,16 +106,45 @@ const Watch = () => {
         </div>
 
         <div ref={playerRef}>
-          {channel.playerType === "custom" ? (
-            <PlaylistPlayer
-              channel={{
-                name: channel.name,
-                logo: channel.logo,
-                group: sameCategory?.name || "",
-                streamUrl: channel.streamUrl,
-              }}
-              autoPlay={true}
-            />
+          {channel.playerType === "external" && isMobile ? (
+            <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-4 p-6">
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-display font-bold text-foreground">{channel.name}</h3>
+                <p className="text-sm text-muted-foreground">This channel uses an external player for the best mobile experience.</p>
+              </div>
+              <button
+                onClick={() => {
+                  const url = channel.streamUrl;
+                  // Try intent:// for Android first
+                  const intentUrl = `intent:${url}#Intent;type=video/*;end`;
+                  const vlcUrl = `vlc://${url}`;
+
+                  try {
+                    // Try Android intent first
+                    if (/Android/i.test(navigator.userAgent)) {
+                      window.location.href = intentUrl;
+                    } else {
+                      // iOS / fallback: open directly
+                      window.open(url, "_blank");
+                    }
+                    setExternalLaunched(true);
+                    toast.success("Opening in external player...");
+                  } catch {
+                    // Fallback: open URL directly
+                    window.open(url, "_blank");
+                    toast.info("Opening stream link...");
+                  }
+                }}
+                className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition-all animate-pulse"
+              >
+                ▶ Open in External Player
+              </button>
+              {externalLaunched && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Stream opened. If no app launched, install VLC or MX Player.
+                </p>
+              )}
+            </div>
           ) : (
             <Player channel={channel} autoPlay={true} />
           )}
