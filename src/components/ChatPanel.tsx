@@ -39,17 +39,14 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Unified feed read/write source (globalChat/messages)
-  const globalChatCollection = "globalChat";
-  const globalChatMessagesCollection = "messages";
-  const getGlobalChatDocRef = (messageId: string) =>
-    doc(db, globalChatCollection, globalChatMessagesCollection, messageId);
+  // Unified feed: flat collection "globalChat"
+  const getGlobalChatDocRef = (messageId: string) => doc(db, "globalChat", messageId);
   const getChannelChatDocRef = (targetChannelId: string, messageId: string) =>
     doc(db, "channels", targetChannelId, "messages", messageId);
 
   useEffect(() => {
     const q = query(
-      collection(db, globalChatCollection, globalChatMessagesCollection),
+      collection(db, "globalChat"),
       orderBy("createdAt", "desc"),
       limit(50)
     );
@@ -62,7 +59,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
     return unsub;
-  }, [globalChatCollection, globalChatMessagesCollection]);
+  }, []);
 
   const handleSend = useCallback(async () => {
     if (!user || !profile) return toast.error("Login to chat");
@@ -80,7 +77,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
     setSending(true);
     const badges = getAutoBadges(profile);
     const filteredMsg = filterBadWords(input.trim(), settings.badWordFilterEnabled);
-    const messageId = doc(collection(db, globalChatCollection, globalChatMessagesCollection)).id;
+    const messageId = doc(collection(db, "globalChat")).id;
     const msgData: ChatMessage = {
       id: messageId,
       userId: user.uid,
@@ -109,7 +106,7 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
     } finally {
       setSending(false);
     }
-  }, [user, profile, input, settings, lastSent, channelId, globalChatCollection]);
+  }, [user, profile, input, settings, lastSent, channelId]);
 
   const handleLike = async (msg: ChatMessage) => {
     if (!user) return;

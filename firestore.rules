@@ -108,17 +108,8 @@ service cloud.firestore {
 
     // --------------------
     // GLOBAL CHAT (ALL CHANNELS SHARE SAME CHAT)
-    // Primary path: /globalChat/messages/{messageId}
-    // Legacy compatibility path: /globalChat/{messageId}
+    // Flat collection: /globalChat/{messageId}
     // --------------------
-
-    match /globalChat/messages/{messageId} {
-      allow read: if true;
-      allow create: if isLoggedIn() && isValidGlobalChatPayload(request.resource.data);
-      allow update: if isLoggedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likes","isDeleted"]);
-      allow delete: if isAdminOrMod();
-    }
 
     match /globalChat/{messageId} {
       allow read: if true;
