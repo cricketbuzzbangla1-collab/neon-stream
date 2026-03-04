@@ -66,8 +66,8 @@ export interface Ad {
 
 export interface AppSettings {
   telegramUrl: string;
-  notice: string;
-  noticeEnabled: boolean;
+  noticeBarEnabled: boolean;
+  noticeText: string;
   noticeType: "info" | "warning" | "success";
   noticeLink: string;
   defaultTheme: string;

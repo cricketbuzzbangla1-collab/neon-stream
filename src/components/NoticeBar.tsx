@@ -25,8 +25,8 @@ const NoticeBar = () => {
   const [dismissed, setDismissed] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  const noticeEnabled = (settings as any)?.noticeEnabled !== false;
-  const notice = settings?.notice;
+  const noticeEnabled = (settings as any)?.noticeBarEnabled !== false;
+  const notice = (settings as any)?.noticeText;
   const noticeType = ((settings as any)?.noticeType || "info") as keyof typeof typeConfig;
   const noticeLink = (settings as any)?.noticeLink || null;
 
