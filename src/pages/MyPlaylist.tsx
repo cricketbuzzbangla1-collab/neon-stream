@@ -232,7 +232,7 @@ const MyPlaylist = () => {
                           <p className="text-[10px] text-muted-foreground">{ch.group}</p>
                         </div>
                         <button
-                          onClick={() => handleChannelPlay(ch, pl.id, i)}
+                          onClick={() => handleChannelPlay(ch)}
                           className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                         >
                           <Play className="w-3.5 h-3.5" />
