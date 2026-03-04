@@ -53,7 +53,9 @@ export default {
         },
         "surface-glass": "hsl(var(--surface-glass))",
         "live-badge": "hsl(var(--live-badge))",
+        "live-glow": "hsl(var(--live-glow))",
         "neon-green": "hsl(var(--neon-green))",
+        "nav-glass": "hsl(var(--nav-glass))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

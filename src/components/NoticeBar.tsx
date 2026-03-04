@@ -4,21 +4,18 @@ import { X } from "lucide-react";
 
 const typeConfig = {
   info: {
-    bg: "from-[hsl(210,80%,15%)] to-[hsl(210,60%,10%)]",
-    border: "border-[hsl(190,100%,50%)]",
-    glow: "shadow-[0_0_15px_hsl(190,100%,50%,0.2)]",
+    bgVar: "--notice-info-bg",
+    borderVar: "--notice-info-border",
     icon: "ℹ️",
   },
   warning: {
-    bg: "from-[hsl(30,80%,15%)] to-[hsl(30,60%,10%)]",
-    border: "border-[hsl(30,100%,50%)]",
-    glow: "shadow-[0_0_15px_hsl(30,100%,50%,0.2)]",
+    bgVar: "--notice-warn-bg",
+    borderVar: "--notice-warn-border",
     icon: "⚠️",
   },
   success: {
-    bg: "from-[hsl(150,80%,12%)] to-[hsl(150,60%,8%)]",
-    border: "border-[hsl(150,100%,50%)]",
-    glow: "shadow-[0_0_15px_hsl(150,100%,50%,0.2)]",
+    bgVar: "--notice-success-bg",
+    borderVar: "--notice-success-border",
     icon: "✅",
   },
 };
@@ -61,9 +58,14 @@ const NoticeBar = () => {
 
   const content = (
     <div
-      className={`w-full overflow-hidden bg-gradient-to-r ${config.bg} border-b ${config.border} ${config.glow} rounded-b-xl transition-all duration-300 ${
+      className={`w-full overflow-hidden rounded-b-xl transition-all duration-300 ${
         visible ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
       }`}
+      style={{
+        background: `linear-gradient(135deg, hsl(var(${config.bgVar})), hsl(var(${config.bgVar}) / 0.7))`,
+        borderBottom: `1px solid hsl(var(${config.borderVar}))`,
+        boxShadow: `0 0 15px hsl(var(${config.borderVar}) / 0.2)`,
+      }}
     >
       <div className="flex items-center px-4 py-2.5 gap-3">
         <span className="text-base shrink-0">{config.icon}</span>
