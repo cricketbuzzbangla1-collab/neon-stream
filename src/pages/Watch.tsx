@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore";
 import Player from "@/components/Player";
+import PlaylistPlayer from "@/components/PlaylistPlayer";
 import ChannelCard from "@/components/ChannelCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
@@ -104,7 +105,19 @@ const Watch = () => {
         </div>
 
         <div ref={playerRef}>
-          <Player channel={channel} autoPlay={true} />
+          {channel.playerType === "custom" ? (
+            <PlaylistPlayer
+              channel={{
+                name: channel.name,
+                logo: channel.logo,
+                group: sameCategory?.name || "",
+                streamUrl: channel.streamUrl,
+              }}
+              autoPlay={true}
+            />
+          ) : (
+            <Player channel={channel} autoPlay={true} />
+          )}
         </div>
 
         <div className="flex items-center justify-between">

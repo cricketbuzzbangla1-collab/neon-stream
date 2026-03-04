@@ -7,7 +7,7 @@ export interface Channel {
   name: string;
   logo: string;
   streamUrl: string;
-  playerType: "hls" | "native" | "iframe" | "hls-retry" | "dash";
+  playerType: "hls" | "native" | "iframe" | "hls-retry" | "dash" | "custom";
   categoryId: string;
   countryId: string;
   isFeatured: boolean;
@@ -39,7 +39,7 @@ export interface LiveEvent {
   teamB: string;
   teamBLogo: string;
   streamUrl: string;
-  playerType: "hls" | "native" | "iframe" | "hls-retry" | "dash";
+  playerType: "hls" | "native" | "iframe" | "hls-retry" | "dash" | "custom";
   startTime: number;
   endTime: number;
   countryId: string;
