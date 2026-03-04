@@ -2,7 +2,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
@@ -16,6 +16,26 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AppContent = () => {
+  const { isTransitioning } = useTheme();
+
+  return (
+    <div className={isTransitioning ? "theme-animate" : ""}>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/watch/:id" element={<Watch />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/my-playlist" element={<MyPlaylist />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -23,17 +43,7 @@ const App = () => (
         <TooltipProvider>
           <Sonner />
           <BrowserRouter>
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/watch/:id" element={<Watch />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/my-playlist" element={<MyPlaylist />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppContent />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

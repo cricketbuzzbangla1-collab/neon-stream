@@ -27,7 +27,7 @@ const Navbar = () => {
   return (
     <>
       {/* Top bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-border/30">
+      <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-border/30" style={{ background: `hsl(var(--nav-glass) / var(--glass-opacity))` }}>
         <div className="container flex items-center justify-between h-14 px-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="font-display font-bold text-lg text-foreground">
@@ -88,7 +88,7 @@ const Navbar = () => {
       </header>
 
       {/* Bottom nav - mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-border/30 md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-border/30 md:hidden" style={{ background: `hsl(var(--nav-glass) / var(--glass-opacity))` }}>
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => {
             const active = location.pathname === item.to;
