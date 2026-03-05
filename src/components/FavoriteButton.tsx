@@ -1,5 +1,5 @@
 import { Heart } from "lucide-react";
-import { memo } from "react";
+import React from "react";
 
 interface FavoriteButtonProps {
   isFavorited: boolean;
@@ -7,7 +7,7 @@ interface FavoriteButtonProps {
   size?: "sm" | "md";
 }
 
-const FavoriteButton = memo(({ isFavorited, onClick, size = "sm" }: FavoriteButtonProps) => {
+const FavoriteButton = ({ isFavorited, onClick, size = "sm" }: FavoriteButtonProps) => {
   const sizeClass = size === "md" ? "w-5 h-5" : "w-4 h-4";
 
   return (
@@ -27,7 +27,6 @@ const FavoriteButton = memo(({ isFavorited, onClick, size = "sm" }: FavoriteButt
       />
     </button>
   );
-});
+};
 
-FavoriteButton.displayName = "FavoriteButton";
 export default FavoriteButton;
