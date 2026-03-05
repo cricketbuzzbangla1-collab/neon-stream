@@ -52,10 +52,7 @@ const Watch = () => {
   const isHttpStream = channel?.streamUrl?.startsWith("http://") && channel?.streamUrl?.includes(".m3u8");
   const isHttpsHls = channel?.streamUrl?.startsWith("https://") && channel?.streamUrl?.includes(".m3u8");
 
-  // Scroll to top of page when channel changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [id]);
+  // ScrollRestoration component handles scroll position
 
   // Auto-show external player dialog for HTTP streams
   useEffect(() => {
