@@ -90,6 +90,11 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
       isDeleted: false,
     };
 
+    // Optimistic UI: show message immediately
+    setMessages(prev => [...prev, msgData]);
+    setInput("");
+    setLastSent(Date.now());
+
     try {
       const batch = writeBatch(db);
       batch.set(getGlobalChatDocRef(messageId), msgData);
@@ -99,8 +104,6 @@ const ChatPanel = ({ channelId, channelName }: ChatPanelProps) => {
       }
 
       await batch.commit();
-      setInput("");
-      setLastSent(Date.now());
     } catch {
       toast.error("Failed to send");
     } finally {
