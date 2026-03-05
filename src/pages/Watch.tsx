@@ -6,6 +6,7 @@ import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
 import PollSection from "@/components/PollSection";
 import ChatPanel from "@/components/ChatPanel";
+import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
 import { ArrowLeft, Share2, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
