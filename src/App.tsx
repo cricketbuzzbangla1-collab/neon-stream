@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MyPlaylist from "./pages/MyPlaylist";
 import PlaylistWatch from "./pages/PlaylistWatch";
+import Favorites from "./pages/Favorites";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const AppContent = () => {
         <Route path="/admin" element={<Admin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/favorites" element={<Favorites />} />
         <Route path="/my-playlist" element={<MyPlaylist />} />
         <Route path="/playlist/:playlistId/:channelIndex" element={<PlaylistWatch />} />
         <Route path="*" element={<NotFound />} />

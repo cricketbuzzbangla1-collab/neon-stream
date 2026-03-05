@@ -61,6 +61,11 @@ service cloud.firestore {
         allow read: if isLoggedIn();
         allow write: if isLoggedIn() && request.auth.uid == userId;
       }
+
+      // USER FAVORITES
+      match /favorites/{channelId} {
+        allow read, write: if isLoggedIn() && request.auth.uid == userId;
+      }
     }
 
     // --------------------

@@ -1,18 +1,29 @@
 import { Link } from "react-router-dom";
 import { Channel, useCategories } from "@/hooks/useFirestore";
 import { Play } from "lucide-react";
-import { useState } from "react";
+import { useState, memo } from "react";
+import { useFavorites } from "@/hooks/useFavorites";
+import FavoriteButton from "@/components/FavoriteButton";
 
-const ChannelCard = ({ channel }: { channel: Channel }) => {
+const ChannelCard = memo(({ channel }: { channel: Channel }) => {
   const { data: categories } = useCategories();
   const category = categories.find((c) => c.id === channel.categoryId);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const { isFavorited, toggleFavorite } = useFavorites();
 
   return (
-    <Link
-      to={`/watch/${channel.id}`}
-      className="group relative glass-card overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_hsl(var(--glow-primary)/0.25)] border border-border/30 hover:border-primary/50"
-    >
+    <div className="relative">
+      {/* Favorite button overlay */}
+      <div className="absolute top-2 right-2 z-10">
+        <FavoriteButton
+          isFavorited={isFavorited(channel.id)}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(channel); }}
+        />
+      </div>
+      <Link
+        to={`/watch/${channel.id}`}
+        className="group relative glass-card overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_hsl(var(--glow-primary)/0.25)] border border-border/30 hover:border-primary/50 block"
+      >
       {/* Image */}
       <div className="relative aspect-video bg-secondary overflow-hidden">
         {!imgLoaded && channel.logo && (
@@ -59,8 +70,10 @@ const ChannelCard = ({ channel }: { channel: Channel }) => {
           </span>
         )}
       </div>
-    </Link>
+      </Link>
+    </div>
   );
-};
+});
 
+ChannelCard.displayName = "ChannelCard";
 export default ChannelCard;
