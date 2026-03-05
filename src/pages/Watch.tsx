@@ -10,6 +10,7 @@ import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
 import { ArrowLeft, Share2, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
+import { detectPlayerType } from "@/lib/detectPlayerType";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
@@ -48,10 +49,10 @@ const Watch = () => {
   const related = channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId);
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
 
-  // Auto-detect stream type
-  const isHttpStream = channel?.streamUrl?.startsWith("http://") && channel?.streamUrl?.includes(".m3u8");
-  const isDash = channel?.streamUrl?.includes(".mpd");
-  const isHttpsHls = channel?.streamUrl?.startsWith("https://") && channel?.streamUrl?.includes(".m3u8");
+  // Auto-detect player type from URL
+  const detectedType = channel?.streamUrl ? detectPlayerType(channel.streamUrl) : "hls";
+  const isHttpStream = detectedType === "external";
+  const isDash = detectedType === "dash";
 
   // ScrollRestoration component handles scroll position
 
