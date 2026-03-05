@@ -10,6 +10,7 @@ import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
 import { ArrowLeft, Share2, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
+import { detectPlayerType } from "@/lib/detectPlayerType";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
