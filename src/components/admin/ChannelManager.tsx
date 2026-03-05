@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useChannels, useCategories, useCountries, addDocument, updateDocument, deleteDocument, Channel } from "@/hooks/useFirestore";
 import { Plus, Trash2, Edit, Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
+import { detectPlayerType } from "@/lib/detectPlayerType";
 
 const empty: Omit<Channel, "id"> = {
   name: "", logo: "", streamUrl: "", playerType: "hls",
@@ -74,7 +75,10 @@ const ChannelManager = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input placeholder="Channel Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm" />
             <input placeholder="Logo URL" value={form.logo} onChange={(e) => setForm({ ...form, logo: e.target.value })} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm" />
-            <input placeholder="Stream URL" value={form.streamUrl} onChange={(e) => setForm({ ...form, streamUrl: e.target.value })} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm sm:col-span-2" />
+            <input placeholder="Stream URL" value={form.streamUrl} onChange={(e) => {
+              const url = e.target.value;
+              setForm({ ...form, streamUrl: url, playerType: detectPlayerType(url) });
+            }} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm sm:col-span-2" />
             <select value={form.playerType} onChange={(e) => setForm({ ...form, playerType: e.target.value as any })} className="px-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground text-sm">
               <option value="hls">HLS.js</option>
               <option value="dash">DASH (Shaka)</option>
