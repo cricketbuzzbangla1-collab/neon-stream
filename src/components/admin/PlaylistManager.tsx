@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { useChannels, useCategories, useCountries, addDocument, deleteDocument, Channel } from "@/hooks/useFirestore";
 import { Upload, Download, Trash2, Search, FileText, Check, X, AlertTriangle, Loader2, Link as LinkIcon, Filter } from "lucide-react";
 import { toast } from "sonner";
+import { detectPlayerType } from "@/lib/detectPlayerType";
 import { Progress } from "@/components/ui/progress";
 import { collection, getDocs, query, where, writeBatch, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -203,7 +204,7 @@ const PlaylistManager = () => {
             name: ch.name,
             logo: ch.logo,
             streamUrl: ch.streamUrl,
-            playerType: "hls",
+            playerType: detectPlayerType(ch.streamUrl),
             categoryId,
             countryId: ch.countryId,
             isFeatured: false,
