@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { Channel, useCategories } from "@/hooks/useFirestore";
 import { Play } from "lucide-react";
-import { useState, memo } from "react";
+import { useState } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import FavoriteButton from "@/components/FavoriteButton";
 
-const ChannelCard = memo(({ channel }: { channel: Channel }) => {
+const ChannelCard = ({ channel }: { channel: Channel }) => {
   const { data: categories } = useCategories();
   const category = categories.find((c) => c.id === channel.categoryId);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -73,7 +73,6 @@ const ChannelCard = memo(({ channel }: { channel: Channel }) => {
       </Link>
     </div>
   );
-});
+};
 
-ChannelCard.displayName = "ChannelCard";
 export default ChannelCard;
