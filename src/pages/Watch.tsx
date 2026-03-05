@@ -22,10 +22,9 @@ const Watch = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const [showReport, setShowReport] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [externalLaunched, setExternalLaunched] = useState(false);
+  const [showExternalDialog, setShowExternalDialog] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   const { isFavorited, toggleFavorite } = useFavorites();
-  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
@@ -49,11 +48,23 @@ const Watch = () => {
   const related = channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId);
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
 
+  // Determine if this is an HTTP stream that needs external player
+  const isHttpStream = channel?.streamUrl?.startsWith("http://") && channel?.streamUrl?.includes(".m3u8");
+  const isHttpsHls = channel?.streamUrl?.startsWith("https://") && channel?.streamUrl?.includes(".m3u8");
+
+  // Scroll to top of page when channel changes
   useEffect(() => {
-    setTimeout(() => {
-      playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 200);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [id]);
+
+  // Auto-show external player dialog for HTTP streams
+  useEffect(() => {
+    if (isHttpStream && channel) {
+      setShowExternalDialog(true);
+    } else {
+      setShowExternalDialog(false);
+    }
+  }, [isHttpStream, channel?.id]);
 
   const handleRelatedClick = (channelId: string) => {
     navigate(`/watch/${channelId}`, { replace: true });
