@@ -27,6 +27,8 @@ const ChannelCard = ({ channel }: { channel: Channel }) => {
       </div>
       <Link
         to={`/watch/${channel.id}`}
+        onMouseEnter={handlePrefetch}
+        onTouchStart={handlePrefetch}
         className="group relative glass-card overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_hsl(var(--glow-primary)/0.25)] border border-border/30 hover:border-primary/50 block"
       >
       {/* Image */}
