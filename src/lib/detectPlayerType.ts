@@ -6,7 +6,7 @@
  *  - .mpd     → dash (Shaka Player)
  *  - https:// → hls (HLS.js internal player, default for HTTPS)
  */
-export function detectPlayerType(url: string): string {
+export function detectPlayerType(url: string): "hls" | "dash" | "external" | "native" | "iframe" | "hls-retry" {
   if (!url) return "hls";
 
   const trimmed = url.trim().toLowerCase();
