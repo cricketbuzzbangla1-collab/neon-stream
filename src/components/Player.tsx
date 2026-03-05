@@ -11,6 +11,7 @@ import {
 interface PlayerProps {
   channel: Channel;
   autoPlay?: boolean;
+  onFatalError?: () => void;
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -25,7 +26,7 @@ const SCREEN_MODES: { value: ScreenMode; label: string; icon: string }[] = [
   { value: "theater", label: "Theater", icon: "🎬" },
 ];
 
-const Player = ({ channel }: PlayerProps) => {
+const Player = ({ channel, onFatalError }: PlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -187,6 +188,7 @@ const Player = ({ channel }: PlayerProps) => {
         } else {
           setError(true);
           setBuffering(false);
+          onFatalError?.();
         }
       });
 
@@ -280,8 +282,13 @@ const Player = ({ channel }: PlayerProps) => {
         });
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (data.fatal) {
-            if (detectedMode === "hls") setCurrentMode("hls-retry");
-            else setCurrentMode("native");
+            if (detectedMode === "hls") {
+              setCurrentMode("hls-retry");
+            } else {
+              setError(true);
+              setBuffering(false);
+              onFatalError?.();
+            }
           }
         });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
