@@ -6,8 +6,10 @@ import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
 import PollSection from "@/components/PollSection";
 import ChatPanel from "@/components/ChatPanel";
-import { ArrowLeft, Share2, Heart, AlertTriangle, MessageCircle } from "lucide-react";
+import { ArrowLeft, Share2, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useFavorites } from "@/hooks/useFavorites";
+import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
 
@@ -17,11 +19,11 @@ const Watch = () => {
   const { data: channels, loading } = useChannels();
   const { data: categories } = useCategories();
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
-  const [favorited, setFavorited] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [externalLaunched, setExternalLaunched] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
+  const { isFavorited, toggleFavorite } = useFavorites();
   const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 
   const isEvent = id?.startsWith("event-");
@@ -61,10 +63,6 @@ const Watch = () => {
     catch { navigator.clipboard.writeText(window.location.href); toast.success("Link copied!"); }
   };
 
-  const toggleFav = () => {
-    setFavorited(!favorited);
-    toast.success(favorited ? "Removed from favorites" : "Added to favorites");
-  };
 
   if (loading || (isEvent && eventsLoading)) {
     return (
@@ -96,9 +94,13 @@ const Watch = () => {
             <button onClick={() => setShowChat(!showChat)} className={`p-2 rounded-lg transition-all ${showChat ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}>
               <MessageCircle className="w-5 h-5" />
             </button>
-            <button onClick={toggleFav} className={`p-2 rounded-lg transition-all ${favorited ? "text-accent glow-accent" : "text-muted-foreground hover:text-foreground"}`}>
-              <Heart className={`w-5 h-5 ${favorited ? "fill-current" : ""}`} />
-            </button>
+            {channel && (
+              <FavoriteButton
+                isFavorited={isFavorited(channel.id)}
+                onClick={(e) => { e.preventDefault(); toggleFavorite(channel); }}
+                size="md"
+              />
+            )}
             <button onClick={handleShare} className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
               <Share2 className="w-5 h-5" />
             </button>
