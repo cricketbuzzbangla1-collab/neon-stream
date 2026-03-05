@@ -1,5 +1,8 @@
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, addDoc, updateDoc, deleteDoc, doc, QueryConstraint } from "firebase/firestore";
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  collection, onSnapshot, query, orderBy, limit as firestoreLimit,
+  addDoc, updateDoc, deleteDoc, doc, getDocs, QueryConstraint,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export interface Channel {
@@ -76,12 +79,27 @@ export interface AppSettings {
   logo: string;
 }
 
-function useCollection<T extends { id: string }>(
+// In-memory cache with TTL
+const cache = new Map<string, { data: any[]; ts: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached<T>(key: string): T[] | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data as T[];
+  return null;
+}
+
+function setCache(key: string, data: any[]) {
+  cache.set(key, { data, ts: Date.now() });
+}
+
+// Realtime collection hook (for data that needs live updates like liveEvents)
+function useRealtimeCollection<T extends { id: string }>(
   collectionName: string,
   ...constraints: QueryConstraint[]
 ) {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<T[]>(() => getCached<T>(collectionName) || []);
+  const [loading, setLoading] = useState(!getCached(collectionName));
 
   useEffect(() => {
     const q = constraints.length > 0
@@ -91,6 +109,7 @@ function useCollection<T extends { id: string }>(
     const unsub = onSnapshot(q, (snap) => {
       const items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as T));
       setData(items);
+      setCache(collectionName, items);
       setLoading(false);
     }, () => setLoading(false));
 
@@ -100,24 +119,62 @@ function useCollection<T extends { id: string }>(
   return { data, loading };
 }
 
-export function useChannels() {
-  return useCollection<Channel>("channels");
+// Cached one-time fetch hook (for static-ish data like categories, countries)
+function useCachedCollection<T extends { id: string }>(
+  collectionName: string,
+  ...constraints: QueryConstraint[]
+) {
+  const [data, setData] = useState<T[]>(() => getCached<T>(collectionName) || []);
+  const [loading, setLoading] = useState(!getCached(collectionName));
+  const fetched = useRef(false);
+
+  useEffect(() => {
+    // If cached and fresh, skip fetch
+    const cached = getCached<T>(collectionName);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+      return;
+    }
+    if (fetched.current) return;
+    fetched.current = true;
+
+    const q = constraints.length > 0
+      ? query(collection(db, collectionName), ...constraints)
+      : query(collection(db, collectionName));
+
+    getDocs(q).then((snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as T));
+      setData(items);
+      setCache(collectionName, items);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [collectionName]);
+
+  return { data, loading };
 }
 
+// Channels: use realtime since they can change, but with limit
+export function useChannels() {
+  return useRealtimeCollection<Channel>("channels");
+}
+
+// Categories & Countries: mostly static, use cached fetch
 export function useCategories() {
-  return useCollection<Category>("categories");
+  return useCachedCollection<Category>("categories");
 }
 
 export function useCountries() {
-  return useCollection<Country>("countries");
+  return useCachedCollection<Country>("countries");
 }
 
+// Live events: need realtime for status updates
 export function useLiveEvents() {
-  return useCollection<LiveEvent>("liveEvents");
+  return useRealtimeCollection<LiveEvent>("liveEvents");
 }
 
 export function useAds() {
-  return useCollection<Ad>("ads");
+  return useCachedCollection<Ad>("ads");
 }
 
 export function useSettings() {
@@ -138,13 +195,17 @@ export function useSettings() {
 }
 
 export async function addDocument(col: string, data: any) {
+  // Invalidate cache on write
+  cache.delete(col);
   return addDoc(collection(db, col), { ...data, createdAt: Date.now() });
 }
 
 export async function updateDocument(col: string, id: string, data: any) {
+  cache.delete(col);
   return updateDoc(doc(db, col, id), data);
 }
 
 export async function deleteDocument(col: string, id: string) {
+  cache.delete(col);
   return deleteDoc(doc(db, col, id));
 }
