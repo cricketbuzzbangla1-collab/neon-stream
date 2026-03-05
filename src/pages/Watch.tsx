@@ -6,6 +6,7 @@ import SkeletonCard from "@/components/SkeletonCard";
 import PostsSection from "@/components/PostsSection";
 import PollSection from "@/components/PollSection";
 import ChatPanel from "@/components/ChatPanel";
+import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
 import { ArrowLeft, Share2, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -21,10 +22,9 @@ const Watch = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const [showReport, setShowReport] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [externalLaunched, setExternalLaunched] = useState(false);
+  const [showExternalDialog, setShowExternalDialog] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   const { isFavorited, toggleFavorite } = useFavorites();
-  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
@@ -48,11 +48,23 @@ const Watch = () => {
   const related = channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId);
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
 
+  // Determine if this is an HTTP stream that needs external player
+  const isHttpStream = channel?.streamUrl?.startsWith("http://") && channel?.streamUrl?.includes(".m3u8");
+  const isHttpsHls = channel?.streamUrl?.startsWith("https://") && channel?.streamUrl?.includes(".m3u8");
+
+  // Scroll to top of page when channel changes
   useEffect(() => {
-    setTimeout(() => {
-      playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 200);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [id]);
+
+  // Auto-show external player dialog for HTTP streams
+  useEffect(() => {
+    if (isHttpStream && channel) {
+      setShowExternalDialog(true);
+    } else {
+      setShowExternalDialog(false);
+    }
+  }, [isHttpStream, channel?.id]);
 
   const handleRelatedClick = (channelId: string) => {
     navigate(`/watch/${channelId}`, { replace: true });
@@ -108,49 +120,32 @@ const Watch = () => {
         </div>
 
         <div ref={playerRef}>
-          {channel.playerType === "external" && isMobile ? (
+          {isHttpStream ? (
             <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-4 p-6">
               <div className="text-center space-y-2">
                 <h3 className="text-lg font-display font-bold text-foreground">{channel.name}</h3>
-                <p className="text-sm text-muted-foreground">This channel uses an external player for the best mobile experience.</p>
+                <p className="text-sm text-muted-foreground">
+                  This stream requires an external player for playback.
+                </p>
               </div>
               <button
-                onClick={() => {
-                  const url = channel.streamUrl;
-                  // Try intent:// for Android first
-                  const intentUrl = `intent:${url}#Intent;type=video/*;end`;
-                  const vlcUrl = `vlc://${url}`;
-
-                  try {
-                    // Try Android intent first
-                    if (/Android/i.test(navigator.userAgent)) {
-                      window.location.href = intentUrl;
-                    } else {
-                      // iOS / fallback: open directly
-                      window.open(url, "_blank");
-                    }
-                    setExternalLaunched(true);
-                    toast.success("Opening in external player...");
-                  } catch {
-                    // Fallback: open URL directly
-                    window.open(url, "_blank");
-                    toast.info("Opening stream link...");
-                  }
-                }}
+                onClick={() => setShowExternalDialog(true)}
                 className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition-all animate-pulse"
               >
-                ▶ Open in External Player
+                ▶ Choose External Player
               </button>
-              {externalLaunched && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Stream opened. If no app launched, install VLC or MX Player.
-                </p>
-              )}
             </div>
           ) : (
             <Player channel={channel} autoPlay={true} />
           )}
         </div>
+
+        <ExternalPlayerDialog
+          open={showExternalDialog}
+          onClose={() => setShowExternalDialog(false)}
+          streamUrl={channel.streamUrl}
+          channelName={channel.name}
+        />
 
         <div className="flex items-center justify-between">
           <button
