@@ -5,18 +5,37 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import Index from "./pages/Index";
-import Watch from "./pages/Watch";
-import Search from "./pages/Search";
-import Admin from "./pages/Admin";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import MyPlaylist from "./pages/MyPlaylist";
-import PlaylistWatch from "./pages/PlaylistWatch";
-import Favorites from "./pages/Favorites";
-import NotFound from "./pages/NotFound";
+import ScrollRestoration from "@/components/ScrollRestoration";
+import { lazy, Suspense } from "react";
 
-const queryClient = new QueryClient();
+// Lazy load all route pages
+const Index = lazy(() => import("./pages/Index"));
+const Watch = lazy(() => import("./pages/Watch"));
+const Search = lazy(() => import("./pages/Search"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const MyPlaylist = lazy(() => import("./pages/MyPlaylist"));
+const PlaylistWatch = lazy(() => import("./pages/PlaylistWatch"));
+const Favorites = lazy(() => import("./pages/Favorites"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+const PageLoader = () => (
+  <div className="min-h-screen pt-16 pb-20 flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const AppContent = () => {
   const { isTransitioning } = useTheme();
@@ -24,18 +43,21 @@ const AppContent = () => {
   return (
     <div className={isTransitioning ? "theme-animate" : ""}>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/watch/:id" element={<Watch />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/favorites" element={<Favorites />} />
-        <Route path="/my-playlist" element={<MyPlaylist />} />
-        <Route path="/playlist/:playlistId/:channelIndex" element={<PlaylistWatch />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <ScrollRestoration />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/watch/:id" element={<Watch />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/my-playlist" element={<MyPlaylist />} />
+          <Route path="/playlist/:playlistId/:channelIndex" element={<PlaylistWatch />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 };
