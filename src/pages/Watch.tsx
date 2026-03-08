@@ -24,6 +24,24 @@ const Watch = () => {
   const [showReport, setShowReport] = useState(false);
   const [showExternalDialog, setShowExternalDialog] = useState(false);
   const { isFavorited, toggleFavorite } = useFavorites();
+  const { isAdmin } = useAuth();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteChannel = async () => {
+    if (!channel || !isAdmin) return;
+    const confirmed = window.confirm(`Delete "${channel.name}"? This cannot be undone.`);
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "channels", channel.id));
+      toast.success("Channel deleted successfully");
+      navigate("/", { replace: true });
+    } catch {
+      toast.error("Failed to delete channel");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
