@@ -1,9 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Tv, MessageCircle, ListMusic, Palette, User, LogOut, Send, Heart } from "lucide-react";
+import { Home, Tv, MessageCircle, Palette, User, LogOut, Send, Menu } from "lucide-react";
 import { useTheme, ThemeType } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/hooks/useFirestore";
 import { useState } from "react";
+import AppSidebar from "@/components/AppSidebar";
 
 const themes: { value: ThemeType; label: string; icon: string }[] = [
   { value: "dark-neon", label: "Neon Dark", icon: "🟢" },
@@ -17,14 +18,14 @@ const Navbar = () => {
   const { settings } = useSettings();
   const [showThemes, setShowThemes] = useState(false);
   const [showUser, setShowUser] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const telegramUrl = (settings as any)?.telegramUrl || "https://t.me/abctvlive";
 
   const navItems = [
     { to: "/", icon: Home, label: "Home" },
     { to: "/channels", icon: Tv, label: "Channels" },
-    { to: "/chat", icon: MessageCircle, label: "Chat" },
-    { to: "/my-playlist", icon: ListMusic, label: "Playlist" },
+    { to: "/chat", icon: MessageCircle, label: "Community" },
   ];
 
   return (
@@ -32,16 +33,17 @@ const Navbar = () => {
       {/* Top bar */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border/30">
         <div className="container flex items-center justify-between h-14 px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="font-display font-bold text-lg text-foreground">
-              Abc<span className="text-primary">TV</span> <span className="text-primary">LIVE</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-1">
-            {/* Favorites */}
-            <Link to="/favorites" className="p-2 rounded-lg hover:bg-secondary transition-all" title="Favorites">
-              <Heart className="w-5 h-5 text-destructive" />
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-secondary transition-all">
+              <Menu className="w-5 h-5 text-foreground" />
+            </button>
+            <Link to="/" className="flex items-center gap-2">
+              <span className="font-display font-bold text-lg text-foreground">
+                Abc<span className="text-primary">TV</span> <span className="text-primary">LIVE</span>
+              </span>
             </Link>
+          </div>
+          <div className="flex items-center gap-1">
             {/* Telegram */}
             <a href={telegramUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-secondary transition-all" title="Telegram">
               <Send className="w-5 h-5 text-primary" />
@@ -92,6 +94,9 @@ const Navbar = () => {
           </div>
         </div>
       </header>
+
+      {/* Sidebar */}
+      <AppSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t border-border/30">
