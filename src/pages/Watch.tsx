@@ -3,13 +3,14 @@ import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore"
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
 import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
-import { ArrowLeft, Share2, AlertTriangle } from "lucide-react";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { detectPlayerType } from "@/lib/detectPlayerType";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
+import { useSwipeChannel } from "@/hooks/useSwipeChannel";
 
 const Watch = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,7 @@ const Watch = () => {
   const [showReport, setShowReport] = useState(false);
   const [showExternalDialog, setShowExternalDialog] = useState(false);
   const { isFavorited, toggleFavorite } = useFavorites();
+  const [swipeIndicator, setSwipeIndicator] = useState<"left" | "right" | null>(null);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
@@ -38,7 +40,37 @@ const Watch = () => {
     return channels.find((c) => c.id === id) || null;
   }, [isEvent, liveEvent, channels, id]);
 
-  const related = useMemo(() => 
+  // Channel list for swipe navigation (same category or all)
+  const channelList = useMemo(() => {
+    if (isEvent) return [];
+    if (channel?.categoryId) {
+      const sameCat = channels.filter(c => c.categoryId === channel.categoryId);
+      return sameCat.length > 1 ? sameCat : channels;
+    }
+    return channels;
+  }, [channels, channel?.categoryId, isEvent]);
+
+  const currentIndex = useMemo(() => channelList.findIndex(c => c.id === id), [channelList, id]);
+
+  const goToChannel = useCallback((direction: "next" | "prev") => {
+    if (channelList.length < 2 || currentIndex === -1) return;
+    const newIndex = direction === "next"
+      ? (currentIndex + 1) % channelList.length
+      : (currentIndex - 1 + channelList.length) % channelList.length;
+    const nextChannel = channelList[newIndex];
+    if (nextChannel) {
+      setSwipeIndicator(direction === "next" ? "left" : "right");
+      setTimeout(() => setSwipeIndicator(null), 400);
+      navigate(`/watch/${nextChannel.id}`, { replace: true });
+    }
+  }, [channelList, currentIndex, navigate]);
+
+  const swipeHandlers = useSwipeChannel({
+    onSwipeLeft: () => goToChannel("next"),
+    onSwipeRight: () => goToChannel("prev"),
+  });
+
+  const related = useMemo(() =>
     channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId).slice(0, 6),
     [channels, id, channel?.categoryId]
   );
@@ -93,21 +125,52 @@ const Watch = () => {
           </div>
         </div>
 
-        {/* Player */}
-        {isHttpStream ? (
-          <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-3">
-            <h3 className="text-base font-display font-bold text-foreground">{channel.name}</h3>
-            <p className="text-xs text-muted-foreground">Requires external player</p>
-            <button
-              onClick={() => setShowExternalDialog(true)}
-              className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all"
-            >
-              ▶ Open Player
-            </button>
-          </div>
-        ) : (
-          <Player channel={channel} autoPlay={true} onFatalError={() => setShowExternalDialog(true)} />
-        )}
+        {/* Player with swipe area */}
+        <div
+          className="relative"
+          {...swipeHandlers}
+        >
+          {/* Swipe indicators */}
+          {swipeIndicator && (
+            <div className={`absolute inset-y-0 z-20 flex items-center pointer-events-none ${
+              swipeIndicator === "left" ? "right-2" : "left-2"
+            }`}>
+              <div className="bg-primary/80 text-primary-foreground rounded-full p-2 animate-pulse">
+                {swipeIndicator === "left" ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
+              </div>
+            </div>
+          )}
+
+          {isHttpStream ? (
+            <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-3">
+              <h3 className="text-base font-display font-bold text-foreground">{channel.name}</h3>
+              <p className="text-xs text-muted-foreground">Requires external player</p>
+              <button
+                onClick={() => setShowExternalDialog(true)}
+                className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all"
+              >
+                ▶ Open Player
+              </button>
+            </div>
+          ) : (
+            <Player channel={channel} autoPlay={true} onFatalError={() => setShowExternalDialog(true)} />
+          )}
+
+          {/* Swipe hint for non-events */}
+          {!isEvent && channelList.length > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <button onClick={() => goToChannel("prev")} className="p-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-[10px] text-muted-foreground font-medium">
+                Swipe to switch • {currentIndex + 1}/{channelList.length}
+              </span>
+              <button onClick={() => goToChannel("next")} className="p-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
 
         <ExternalPlayerDialog
           open={showExternalDialog}
