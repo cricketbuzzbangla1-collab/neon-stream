@@ -21,7 +21,6 @@ const Watch = () => {
   const [showReport, setShowReport] = useState(false);
   const [showExternalDialog, setShowExternalDialog] = useState(false);
   const { isFavorited, toggleFavorite } = useFavorites();
-  const [swipeIndicator, setSwipeIndicator] = useState<"left" | "right" | null>(null);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
