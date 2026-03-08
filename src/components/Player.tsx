@@ -458,35 +458,66 @@ const Player = ({ channel, onFatalError, onSwipeNext, onSwipePrev, channelInfo }
     }
   };
 
-  // Swipe gestures: right = volume, left = brightness
-  const touchStartRef = useRef<{ x: number; y: number; vol: number; bright: number } | null>(null);
+  // Swipe gestures: horizontal = channel switch, vertical right = volume, vertical left = brightness
+  const touchStartRef = useRef<{ x: number; y: number; vol: number; bright: number; time: number } | null>(null);
+  const swipeDirectionRef = useRef<"horizontal" | "vertical" | null>(null);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY, vol: volume, bright: brightness };
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, vol: volume, bright: brightness, time: Date.now() };
+    swipeDirectionRef.current = null;
   };
+
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartRef.current || !containerRef.current) return;
     const touch = e.touches[0];
     const rect = containerRef.current.getBoundingClientRect();
-    const startX = touchStartRef.current.x - rect.left;
+    const dx = touch.clientX - touchStartRef.current.x;
     const dy = touchStartRef.current.y - touch.clientY;
-    const sensitivity = rect.height * 0.5;
 
-    if (startX > rect.width / 2) {
-      // Right side → volume
-      const newVol = Math.max(0, Math.min(1, touchStartRef.current.vol + dy / sensitivity));
-      handleVolumeChange(newVol);
-      setVolumeIndicator(true);
-      setBrightnessIndicator(false);
-    } else {
-      // Left side → brightness
-      const newBright = Math.max(0.2, Math.min(1.5, touchStartRef.current.bright + dy / sensitivity));
-      setBrightness(newBright);
-      setBrightnessIndicator(true);
-      setVolumeIndicator(false);
+    // Lock direction after threshold
+    if (!swipeDirectionRef.current && (Math.abs(dx) > 15 || Math.abs(dy) > 15)) {
+      swipeDirectionRef.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+    }
+
+    if (swipeDirectionRef.current === "vertical") {
+      const startX = touchStartRef.current.x - rect.left;
+      const sensitivity = rect.height * 0.5;
+      if (startX > rect.width / 2) {
+        const newVol = Math.max(0, Math.min(1, touchStartRef.current.vol + dy / sensitivity));
+        handleVolumeChange(newVol);
+        setVolumeIndicator(true);
+        setBrightnessIndicator(false);
+      } else {
+        const newBright = Math.max(0.2, Math.min(1.5, touchStartRef.current.bright + dy / sensitivity));
+        setBrightness(newBright);
+        setBrightnessIndicator(true);
+        setVolumeIndicator(false);
+      }
     }
   };
-  const handleTouchEnd = () => {
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartRef.current && swipeDirectionRef.current === "horizontal") {
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartRef.current.x;
+      const elapsed = Date.now() - touchStartRef.current.time;
+
+      if (elapsed < 400 && Math.abs(dx) > 60) {
+        if (dx < -60 && onSwipeNext) {
+          setSwipeChannelIndicator("next");
+          setTimeout(() => setSwipeChannelIndicator(null), 500);
+          onSwipeNext();
+        } else if (dx > 60 && onSwipePrev) {
+          setSwipeChannelIndicator("prev");
+          setTimeout(() => setSwipeChannelIndicator(null), 500);
+          onSwipePrev();
+        }
+      }
+    }
+
+    touchStartRef.current = null;
+    swipeDirectionRef.current = null;
     setTimeout(() => { setVolumeIndicator(false); setBrightnessIndicator(false); }, 600);
   };
 
