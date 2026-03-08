@@ -39,15 +39,15 @@ const Watch = () => {
     return channels.find((c) => c.id === id) || null;
   }, [isEvent, liveEvent, channels, id]);
 
-  // Channel list for swipe navigation (same category or all)
+  // Channel list for swipe: all HTTPS channels (HLS.js compatible) 
   const channelList = useMemo(() => {
     if (isEvent) return [];
-    if (channel?.categoryId) {
-      const sameCat = channels.filter(c => c.categoryId === channel.categoryId);
-      return sameCat.length > 1 ? sameCat : channels;
-    }
-    return channels;
-  }, [channels, channel?.categoryId, isEvent]);
+    return channels.filter(c => 
+      c.streamUrl?.startsWith("https") && 
+      c.playerType !== "external" && 
+      c.playerType !== "iframe"
+    );
+  }, [channels, isEvent]);
 
   const currentIndex = useMemo(() => channelList.findIndex(c => c.id === id), [channelList, id]);
 
