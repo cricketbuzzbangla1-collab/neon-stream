@@ -62,6 +62,7 @@ const Player = ({ channel, onFatalError, onSwipeNext, onSwipePrev, channelInfo }
   const [brightnessIndicator, setBrightnessIndicator] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
   const [currentResLabel, setCurrentResLabel] = useState("Auto");
+  const [swipeChannelIndicator, setSwipeChannelIndicator] = useState<"next" | "prev" | null>(null);
 
   const closeAllMenus = useCallback(() => {
     setShowQualityMenu(false);
