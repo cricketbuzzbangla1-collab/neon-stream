@@ -125,22 +125,8 @@ const Watch = () => {
           </div>
         </div>
 
-        {/* Player with swipe area */}
-        <div
-          className="relative"
-          {...swipeHandlers}
-        >
-          {/* Swipe indicators */}
-          {swipeIndicator && (
-            <div className={`absolute inset-y-0 z-20 flex items-center pointer-events-none ${
-              swipeIndicator === "left" ? "right-2" : "left-2"
-            }`}>
-              <div className="bg-primary/80 text-primary-foreground rounded-full p-2 animate-pulse">
-                {swipeIndicator === "left" ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
-              </div>
-            </div>
-          )}
-
+        {/* Player with swipe */}
+        <div className="relative">
           {isHttpStream ? (
             <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-3">
               <h3 className="text-base font-display font-bold text-foreground">{channel.name}</h3>
@@ -153,17 +139,24 @@ const Watch = () => {
               </button>
             </div>
           ) : (
-            <Player channel={channel} autoPlay={true} onFatalError={() => setShowExternalDialog(true)} />
+            <Player
+              channel={channel}
+              autoPlay={true}
+              onFatalError={() => setShowExternalDialog(true)}
+              onSwipeNext={() => goToChannel("next")}
+              onSwipePrev={() => goToChannel("prev")}
+              channelInfo={!isEvent && channelList.length > 1 ? { current: currentIndex + 1, total: channelList.length } : undefined}
+            />
           )}
 
-          {/* Swipe hint for non-events */}
+          {/* Channel nav buttons below player */}
           {!isEvent && channelList.length > 1 && (
             <div className="flex items-center justify-center gap-4 mt-2">
               <button onClick={() => goToChannel("prev")} className="p-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="text-[10px] text-muted-foreground font-medium">
-                Swipe to switch • {currentIndex + 1}/{channelList.length}
+                ← Swipe to switch → {currentIndex + 1}/{channelList.length}
               </span>
               <button onClick={() => goToChannel("next")} className="p-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all">
                 <ChevronRight className="w-4 h-4" />
