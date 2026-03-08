@@ -5,13 +5,16 @@ import {
   Volume2, VolumeX, Maximize, Minimize, AlertTriangle, Loader2,
   Play, Pause, Settings, Radio, RotateCcw,
   PictureInPicture2, Gauge, SkipBack, SkipForward,
-  Monitor, Rows3
+  Monitor, Rows3, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 interface PlayerProps {
   channel: Channel;
   autoPlay?: boolean;
   onFatalError?: () => void;
+  onSwipeNext?: () => void;
+  onSwipePrev?: () => void;
+  channelInfo?: { current: number; total: number };
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -26,7 +29,7 @@ const SCREEN_MODES: { value: ScreenMode; label: string; icon: string }[] = [
   { value: "theater", label: "Theater", icon: "🎬" },
 ];
 
-const Player = ({ channel, onFatalError }: PlayerProps) => {
+const Player = ({ channel, onFatalError, onSwipeNext, onSwipePrev, channelInfo }: PlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -59,6 +62,7 @@ const Player = ({ channel, onFatalError }: PlayerProps) => {
   const [brightnessIndicator, setBrightnessIndicator] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
   const [currentResLabel, setCurrentResLabel] = useState("Auto");
+  const [swipeChannelIndicator, setSwipeChannelIndicator] = useState<"next" | "prev" | null>(null);
 
   const closeAllMenus = useCallback(() => {
     setShowQualityMenu(false);
@@ -454,35 +458,66 @@ const Player = ({ channel, onFatalError }: PlayerProps) => {
     }
   };
 
-  // Swipe gestures: right = volume, left = brightness
-  const touchStartRef = useRef<{ x: number; y: number; vol: number; bright: number } | null>(null);
+  // Swipe gestures: horizontal = channel switch, vertical right = volume, vertical left = brightness
+  const touchStartRef = useRef<{ x: number; y: number; vol: number; bright: number; time: number } | null>(null);
+  const swipeDirectionRef = useRef<"horizontal" | "vertical" | null>(null);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY, vol: volume, bright: brightness };
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, vol: volume, bright: brightness, time: Date.now() };
+    swipeDirectionRef.current = null;
   };
+
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartRef.current || !containerRef.current) return;
     const touch = e.touches[0];
     const rect = containerRef.current.getBoundingClientRect();
-    const startX = touchStartRef.current.x - rect.left;
+    const dx = touch.clientX - touchStartRef.current.x;
     const dy = touchStartRef.current.y - touch.clientY;
-    const sensitivity = rect.height * 0.5;
 
-    if (startX > rect.width / 2) {
-      // Right side → volume
-      const newVol = Math.max(0, Math.min(1, touchStartRef.current.vol + dy / sensitivity));
-      handleVolumeChange(newVol);
-      setVolumeIndicator(true);
-      setBrightnessIndicator(false);
-    } else {
-      // Left side → brightness
-      const newBright = Math.max(0.2, Math.min(1.5, touchStartRef.current.bright + dy / sensitivity));
-      setBrightness(newBright);
-      setBrightnessIndicator(true);
-      setVolumeIndicator(false);
+    // Lock direction after threshold
+    if (!swipeDirectionRef.current && (Math.abs(dx) > 15 || Math.abs(dy) > 15)) {
+      swipeDirectionRef.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+    }
+
+    if (swipeDirectionRef.current === "vertical") {
+      const startX = touchStartRef.current.x - rect.left;
+      const sensitivity = rect.height * 0.5;
+      if (startX > rect.width / 2) {
+        const newVol = Math.max(0, Math.min(1, touchStartRef.current.vol + dy / sensitivity));
+        handleVolumeChange(newVol);
+        setVolumeIndicator(true);
+        setBrightnessIndicator(false);
+      } else {
+        const newBright = Math.max(0.2, Math.min(1.5, touchStartRef.current.bright + dy / sensitivity));
+        setBrightness(newBright);
+        setBrightnessIndicator(true);
+        setVolumeIndicator(false);
+      }
     }
   };
-  const handleTouchEnd = () => {
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartRef.current && swipeDirectionRef.current === "horizontal") {
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartRef.current.x;
+      const elapsed = Date.now() - touchStartRef.current.time;
+
+      if (elapsed < 400 && Math.abs(dx) > 60) {
+        if (dx < -60 && onSwipeNext) {
+          setSwipeChannelIndicator("next");
+          setTimeout(() => setSwipeChannelIndicator(null), 500);
+          onSwipeNext();
+        } else if (dx > 60 && onSwipePrev) {
+          setSwipeChannelIndicator("prev");
+          setTimeout(() => setSwipeChannelIndicator(null), 500);
+          onSwipePrev();
+        }
+      }
+    }
+
+    touchStartRef.current = null;
+    swipeDirectionRef.current = null;
     setTimeout(() => { setVolumeIndicator(false); setBrightnessIndicator(false); }, 600);
   };
 
@@ -530,7 +565,7 @@ const Player = ({ channel, onFatalError }: PlayerProps) => {
         theaterMode ? "w-full max-w-none rounded-none aspect-[21/9]" : "w-full aspect-video rounded-xl"
       }`}
       onMouseMove={resetControlsTimer}
-      onTouchEnd={(e) => { handleTap(e); handleTouchEnd(); }}
+      onTouchEnd={(e) => { handleTap(e); handleTouchEnd(e); }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
     >
@@ -609,23 +644,42 @@ const Player = ({ channel, onFatalError }: PlayerProps) => {
         </div>
       )}
 
+      {/* Swipe channel indicator */}
+      {swipeChannelIndicator && (
+        <div className={`absolute inset-y-0 z-20 flex items-center pointer-events-none ${
+          swipeChannelIndicator === "next" ? "right-4" : "left-4"
+        }`}>
+          <div className="bg-primary/90 backdrop-blur-xl text-primary-foreground rounded-full p-3 shadow-2xl shadow-primary/40 animate-scale-in">
+            {swipeChannelIndicator === "next" ? <ChevronRight className="w-7 h-7" /> : <ChevronLeft className="w-7 h-7" />}
+          </div>
+        </div>
+      )}
+
+      {/* Channel position indicator */}
+      {channelInfo && channelInfo.total > 1 && showControls && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="bg-background/60 backdrop-blur-xl rounded-full px-3 py-1 flex items-center gap-2 border border-border/20">
+            <ChevronLeft className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[10px] text-foreground font-bold tabular-nums">{channelInfo.current} / {channelInfo.total}</span>
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+          </div>
+        </div>
+      )}
+
       {/* Top bar badges */}
       {!error && (
         <div className={`absolute top-0 left-0 right-0 z-20 flex items-start justify-between p-3 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0"}`}>
           <div className="flex items-center gap-2">
-            {/* LIVE badge */}
             {isLiveStream && (
               <button onClick={goLive} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/90 backdrop-blur-md text-destructive-foreground text-[11px] font-bold uppercase tracking-wider shadow-lg shadow-destructive/20 hover:shadow-destructive/40 transition-all">
                 <span className="w-2 h-2 rounded-full bg-destructive-foreground animate-pulse" />
                 Live
               </button>
             )}
-            {/* Resolution label */}
             <span className="px-2.5 py-1 rounded-lg bg-card/80 backdrop-blur-md text-foreground text-[10px] font-bold uppercase tracking-wider border border-border/30">
               {currentResLabel}
             </span>
           </div>
-          {/* Stream type badge */}
           <span className="px-2.5 py-1 rounded-lg bg-primary/20 backdrop-blur-md text-primary text-[10px] font-bold uppercase tracking-wider border border-primary/20">
             {streamTypeBadge}
           </span>
@@ -634,10 +688,8 @@ const Player = ({ channel, onFatalError }: PlayerProps) => {
 
       {/* Controls overlay */}
       <div className={`absolute inset-0 z-10 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-        {/* Top gradient */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-background/80 to-transparent" />
 
-        {/* Center play/pause button */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           {!playing && !buffering && !error && (
             <button onClick={togglePlay} className="pointer-events-auto p-5 rounded-full bg-primary/20 backdrop-blur-xl border border-primary/30 text-primary shadow-2xl shadow-primary/20 hover:bg-primary/30 transition-all animate-scale-in">

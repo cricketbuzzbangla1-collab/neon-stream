@@ -10,7 +10,7 @@ import { detectPlayerType } from "@/lib/detectPlayerType";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
-import { useSwipeChannel } from "@/hooks/useSwipeChannel";
+
 
 const Watch = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +21,6 @@ const Watch = () => {
   const [showReport, setShowReport] = useState(false);
   const [showExternalDialog, setShowExternalDialog] = useState(false);
   const { isFavorited, toggleFavorite } = useFavorites();
-  const [swipeIndicator, setSwipeIndicator] = useState<"left" | "right" | null>(null);
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
@@ -59,16 +58,10 @@ const Watch = () => {
       : (currentIndex - 1 + channelList.length) % channelList.length;
     const nextChannel = channelList[newIndex];
     if (nextChannel) {
-      setSwipeIndicator(direction === "next" ? "left" : "right");
-      setTimeout(() => setSwipeIndicator(null), 400);
       navigate(`/watch/${nextChannel.id}`, { replace: true });
     }
   }, [channelList, currentIndex, navigate]);
 
-  const swipeHandlers = useSwipeChannel({
-    onSwipeLeft: () => goToChannel("next"),
-    onSwipeRight: () => goToChannel("prev"),
-  });
 
   const related = useMemo(() =>
     channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId).slice(0, 6),
@@ -125,22 +118,8 @@ const Watch = () => {
           </div>
         </div>
 
-        {/* Player with swipe area */}
-        <div
-          className="relative"
-          {...swipeHandlers}
-        >
-          {/* Swipe indicators */}
-          {swipeIndicator && (
-            <div className={`absolute inset-y-0 z-20 flex items-center pointer-events-none ${
-              swipeIndicator === "left" ? "right-2" : "left-2"
-            }`}>
-              <div className="bg-primary/80 text-primary-foreground rounded-full p-2 animate-pulse">
-                {swipeIndicator === "left" ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
-              </div>
-            </div>
-          )}
-
+        {/* Player with swipe */}
+        <div className="relative">
           {isHttpStream ? (
             <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-3">
               <h3 className="text-base font-display font-bold text-foreground">{channel.name}</h3>
@@ -153,17 +132,24 @@ const Watch = () => {
               </button>
             </div>
           ) : (
-            <Player channel={channel} autoPlay={true} onFatalError={() => setShowExternalDialog(true)} />
+            <Player
+              channel={channel}
+              autoPlay={true}
+              onFatalError={() => setShowExternalDialog(true)}
+              onSwipeNext={() => goToChannel("next")}
+              onSwipePrev={() => goToChannel("prev")}
+              channelInfo={!isEvent && channelList.length > 1 ? { current: currentIndex + 1, total: channelList.length } : undefined}
+            />
           )}
 
-          {/* Swipe hint for non-events */}
+          {/* Channel nav buttons below player */}
           {!isEvent && channelList.length > 1 && (
             <div className="flex items-center justify-center gap-4 mt-2">
               <button onClick={() => goToChannel("prev")} className="p-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="text-[10px] text-muted-foreground font-medium">
-                Swipe to switch • {currentIndex + 1}/{channelList.length}
+                ← Swipe to switch → {currentIndex + 1}/{channelList.length}
               </span>
               <button onClick={() => goToChannel("next")} className="p-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all">
                 <ChevronRight className="w-4 h-4" />
