@@ -3,13 +3,16 @@ import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore"
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
 import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
-import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { detectPlayerType } from "@/lib/detectPlayerType";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
 const Watch = () => {
@@ -21,6 +24,24 @@ const Watch = () => {
   const [showReport, setShowReport] = useState(false);
   const [showExternalDialog, setShowExternalDialog] = useState(false);
   const { isFavorited, toggleFavorite } = useFavorites();
+  const { isAdmin } = useAuth();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteChannel = async () => {
+    if (!channel || !isAdmin) return;
+    const confirmed = window.confirm(`Delete "${channel.name}"? This cannot be undone.`);
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "channels", channel.id));
+      toast.success("Channel deleted successfully");
+      navigate("/", { replace: true });
+    } catch {
+      toast.error("Failed to delete channel");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
@@ -177,6 +198,15 @@ const Watch = () => {
           >
             <AlertTriangle className="w-3 h-3" /> Report
           </button>
+          {isAdmin && !isEvent && (
+            <button
+              onClick={handleDeleteChannel}
+              disabled={deleting}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-all disabled:opacity-50"
+            >
+              <Trash2 className="w-3 h-3" /> {deleting ? "Deleting..." : "Delete Channel"}
+            </button>
+          )}
         </div>
 
         <ReportChannelModal
