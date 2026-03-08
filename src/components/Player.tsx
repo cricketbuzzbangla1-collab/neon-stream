@@ -644,23 +644,42 @@ const Player = ({ channel, onFatalError, onSwipeNext, onSwipePrev, channelInfo }
         </div>
       )}
 
+      {/* Swipe channel indicator */}
+      {swipeChannelIndicator && (
+        <div className={`absolute inset-y-0 z-20 flex items-center pointer-events-none ${
+          swipeChannelIndicator === "next" ? "right-4" : "left-4"
+        }`}>
+          <div className="bg-primary/90 backdrop-blur-xl text-primary-foreground rounded-full p-3 shadow-2xl shadow-primary/40 animate-scale-in">
+            {swipeChannelIndicator === "next" ? <ChevronRight className="w-7 h-7" /> : <ChevronLeft className="w-7 h-7" />}
+          </div>
+        </div>
+      )}
+
+      {/* Channel position indicator */}
+      {channelInfo && channelInfo.total > 1 && showControls && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="bg-background/60 backdrop-blur-xl rounded-full px-3 py-1 flex items-center gap-2 border border-border/20">
+            <ChevronLeft className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[10px] text-foreground font-bold tabular-nums">{channelInfo.current} / {channelInfo.total}</span>
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+          </div>
+        </div>
+      )}
+
       {/* Top bar badges */}
       {!error && (
         <div className={`absolute top-0 left-0 right-0 z-20 flex items-start justify-between p-3 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0"}`}>
           <div className="flex items-center gap-2">
-            {/* LIVE badge */}
             {isLiveStream && (
               <button onClick={goLive} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/90 backdrop-blur-md text-destructive-foreground text-[11px] font-bold uppercase tracking-wider shadow-lg shadow-destructive/20 hover:shadow-destructive/40 transition-all">
                 <span className="w-2 h-2 rounded-full bg-destructive-foreground animate-pulse" />
                 Live
               </button>
             )}
-            {/* Resolution label */}
             <span className="px-2.5 py-1 rounded-lg bg-card/80 backdrop-blur-md text-foreground text-[10px] font-bold uppercase tracking-wider border border-border/30">
               {currentResLabel}
             </span>
           </div>
-          {/* Stream type badge */}
           <span className="px-2.5 py-1 rounded-lg bg-primary/20 backdrop-blur-md text-primary text-[10px] font-bold uppercase tracking-wider border border-primary/20">
             {streamTypeBadge}
           </span>
@@ -669,10 +688,8 @@ const Player = ({ channel, onFatalError, onSwipeNext, onSwipePrev, channelInfo }
 
       {/* Controls overlay */}
       <div className={`absolute inset-0 z-10 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-        {/* Top gradient */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-background/80 to-transparent" />
 
-        {/* Center play/pause button */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           {!playing && !buffering && !error && (
             <button onClick={togglePlay} className="pointer-events-auto p-5 rounded-full bg-primary/20 backdrop-blur-xl border border-primary/30 text-primary shadow-2xl shadow-primary/20 hover:bg-primary/30 transition-all animate-scale-in">
