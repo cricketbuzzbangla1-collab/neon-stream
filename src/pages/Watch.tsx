@@ -198,6 +198,15 @@ const Watch = () => {
           >
             <AlertTriangle className="w-3 h-3" /> Report
           </button>
+          {isAdmin && !isEvent && (
+            <button
+              onClick={handleDeleteChannel}
+              disabled={deleting}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-all disabled:opacity-50"
+            >
+              <Trash2 className="w-3 h-3" /> {deleting ? "Deleting..." : "Delete Channel"}
+            </button>
+          )}
         </div>
 
         <ReportChannelModal
