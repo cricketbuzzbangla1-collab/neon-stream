@@ -58,8 +58,6 @@ const Watch = () => {
       : (currentIndex - 1 + channelList.length) % channelList.length;
     const nextChannel = channelList[newIndex];
     if (nextChannel) {
-      setSwipeIndicator(direction === "next" ? "left" : "right");
-      setTimeout(() => setSwipeIndicator(null), 400);
       navigate(`/watch/${nextChannel.id}`, { replace: true });
     }
   }, [channelList, currentIndex, navigate]);
