@@ -5,13 +5,16 @@ import {
   Volume2, VolumeX, Maximize, Minimize, AlertTriangle, Loader2,
   Play, Pause, Settings, Radio, RotateCcw,
   PictureInPicture2, Gauge, SkipBack, SkipForward,
-  Monitor, Rows3
+  Monitor, Rows3, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 interface PlayerProps {
   channel: Channel;
   autoPlay?: boolean;
   onFatalError?: () => void;
+  onSwipeNext?: () => void;
+  onSwipePrev?: () => void;
+  channelInfo?: { current: number; total: number };
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -26,7 +29,7 @@ const SCREEN_MODES: { value: ScreenMode; label: string; icon: string }[] = [
   { value: "theater", label: "Theater", icon: "🎬" },
 ];
 
-const Player = ({ channel, onFatalError }: PlayerProps) => {
+const Player = ({ channel, onFatalError, onSwipeNext, onSwipePrev, channelInfo }: PlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
