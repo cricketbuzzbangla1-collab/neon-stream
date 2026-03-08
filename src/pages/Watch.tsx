@@ -10,7 +10,7 @@ import { detectPlayerType } from "@/lib/detectPlayerType";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
-import { useSwipeChannel } from "@/hooks/useSwipeChannel";
+
 
 const Watch = () => {
   const { id } = useParams<{ id: string }>();
@@ -65,10 +65,6 @@ const Watch = () => {
     }
   }, [channelList, currentIndex, navigate]);
 
-  const swipeHandlers = useSwipeChannel({
-    onSwipeLeft: () => goToChannel("next"),
-    onSwipeRight: () => goToChannel("prev"),
-  });
 
   const related = useMemo(() =>
     channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId).slice(0, 6),
