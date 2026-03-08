@@ -3,13 +3,16 @@ import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore"
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
 import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
-import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { detectPlayerType } from "@/lib/detectPlayerType";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportChannelModal from "@/components/ReportChannelModal";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
 const Watch = () => {
