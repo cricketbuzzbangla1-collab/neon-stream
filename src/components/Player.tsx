@@ -565,7 +565,7 @@ const Player = ({ channel, onFatalError, onSwipeNext, onSwipePrev, channelInfo }
         theaterMode ? "w-full max-w-none rounded-none aspect-[21/9]" : "w-full aspect-video rounded-xl"
       }`}
       onMouseMove={resetControlsTimer}
-      onTouchEnd={(e) => { handleTap(e); handleTouchEnd(); }}
+      onTouchEnd={(e) => { handleTap(e); handleTouchEnd(e); }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
     >
