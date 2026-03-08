@@ -1,15 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, ListMusic, Heart, Palette, User, LogOut, Send } from "lucide-react";
+import { Home, Tv, MessageCircle, Palette, User, LogOut, Send, Heart } from "lucide-react";
 import { useTheme, ThemeType } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/hooks/useFirestore";
 import { useState } from "react";
-import ChatDrawer from "@/components/ChatDrawer";
 
 const themes: { value: ThemeType; label: string; icon: string }[] = [
-  { value: "dark-neon", label: "Dark Neon", icon: "🟢" },
-  { value: "dark-blue", label: "Dark Blue", icon: "🔵" },
-  { value: "amoled", label: "AMOLED", icon: "⚫" },
+  { value: "dark-neon", label: "Neon Dark", icon: "🟢" },
   { value: "light", label: "Light", icon: "⚪" },
 ];
 
@@ -20,21 +17,19 @@ const Navbar = () => {
   const { settings } = useSettings();
   const [showThemes, setShowThemes] = useState(false);
   const [showUser, setShowUser] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
 
   const telegramUrl = (settings as any)?.telegramUrl || "https://t.me/abctvlive";
 
   const navItems = [
     { to: "/", icon: Home, label: "Home" },
-    { to: "/search", icon: Search, label: "Search" },
-    { to: "/favorites", icon: Heart, label: "Favorites" },
-    { to: "/my-playlist", icon: ListMusic, label: "Playlist" },
+    { to: "/channels", icon: Tv, label: "Channels" },
+    { to: "/chat", icon: MessageCircle, label: "Chat" },
   ];
 
   return (
     <>
       {/* Top bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-border/30" style={{ background: `hsl(var(--nav-glass) / var(--glass-opacity))` }}>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border/30">
         <div className="container flex items-center justify-between h-14 px-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="font-display font-bold text-lg text-foreground">
@@ -42,6 +37,10 @@ const Navbar = () => {
             </span>
           </Link>
           <div className="flex items-center gap-1">
+            {/* Favorites */}
+            <Link to="/favorites" className="p-2 rounded-lg hover:bg-secondary transition-all" title="Favorites">
+              <Heart className="w-5 h-5 text-destructive" />
+            </Link>
             {/* Telegram */}
             <a href={telegramUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-secondary transition-all" title="Telegram">
               <Send className="w-5 h-5 text-primary" />
@@ -52,7 +51,7 @@ const Navbar = () => {
                 <Palette className="w-5 h-5 text-muted-foreground" />
               </button>
               {showThemes && (
-                <div className="absolute right-0 top-12 glass-card neon-border p-2 min-w-[160px] z-50">
+                <div className="absolute right-0 top-12 bg-card border border-border rounded-xl p-2 min-w-[150px] z-50 shadow-lg">
                   {themes.map((t) => (
                     <button key={t.value} onClick={() => { setTheme(t.value); setShowThemes(false); }}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${theme === t.value ? "bg-primary/20 text-primary" : "hover:bg-secondary text-foreground"}`}>
@@ -69,14 +68,13 @@ const Navbar = () => {
                   <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
                     <span className="text-xs font-bold text-primary">{profile.name?.charAt(0).toUpperCase()}</span>
                   </div>
-                  <span className="text-sm text-foreground hidden sm:inline max-w-[80px] truncate">{profile.name}</span>
                 </button>
                 {showUser && (
-                  <div className="absolute right-0 top-12 glass-card neon-border p-2 min-w-[160px] z-50">
-                    <p className="px-3 py-1 text-xs text-muted-foreground">{profile.phone}</p>
+                  <div className="absolute right-0 top-12 bg-card border border-border rounded-xl p-2 min-w-[150px] z-50 shadow-lg">
+                    <p className="px-3 py-1 text-xs text-muted-foreground">{profile.name}</p>
                     {isAdmin && (
                       <Link to="/admin" onClick={() => setShowUser(false)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-secondary text-foreground">
-                        ⚙️ Admin Panel
+                        ⚙️ Admin
                       </Link>
                     )}
                     <button onClick={() => { logout(); setShowUser(false); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10">
@@ -94,36 +92,21 @@ const Navbar = () => {
         </div>
       </header>
 
-      {/* Bottom nav - mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-border/30 md:hidden" style={{ background: `hsl(var(--nav-glass) / var(--glass-opacity))` }}>
-        <div className="flex items-center justify-around h-16">
+      {/* Bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t border-border/30 md:hidden">
+        <div className="flex items-center justify-around h-14">
           {navItems.map((item) => {
-            if (item.to === "__chat__") {
-              return (
-                <button
-                  key="chat"
-                  onClick={() => setChatOpen(true)}
-                  className="flex flex-col items-center gap-1 px-4 py-2 transition-all text-muted-foreground"
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">{item.label}</span>
-                </button>
-              );
-            }
             const active = location.pathname === item.to;
             return (
               <Link key={item.to} to={item.to}
-                className={`flex flex-col items-center gap-1 px-4 py-2 transition-all ${active ? "text-primary" : "text-muted-foreground"}`}>
-                <item.icon className={`w-5 h-5 ${active ? "neon-text" : ""}`} />
+                className={`flex flex-col items-center gap-0.5 px-4 py-2 transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
+                <item.icon className="w-5 h-5" />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </Link>
             );
           })}
         </div>
       </nav>
-
-      {/* Chat Drawer */}
-      <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
     </>
   );
 };

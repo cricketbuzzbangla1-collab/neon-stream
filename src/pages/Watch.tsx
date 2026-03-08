@@ -2,12 +2,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore";
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
-import SkeletonCard from "@/components/SkeletonCard";
-import PostsSection from "@/components/PostsSection";
-import PollSection from "@/components/PollSection";
-import ChatPanel from "@/components/ChatPanel";
 import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
-import { ArrowLeft, Share2, AlertTriangle, MessageCircle } from "lucide-react";
+import { ArrowLeft, Share2, AlertTriangle } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { detectPlayerType } from "@/lib/detectPlayerType";
@@ -22,16 +18,12 @@ const Watch = () => {
   const { data: categories } = useCategories();
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const [showReport, setShowReport] = useState(false);
-  const [showChat, setShowChat] = useState(false);
   const [showExternalDialog, setShowExternalDialog] = useState(false);
-  const playerRef = useRef<HTMLDivElement>(null);
   const { isFavorited, toggleFavorite } = useFavorites();
 
   const isEvent = id?.startsWith("event-");
   const eventId = isEvent ? id.replace("event-", "") : null;
   const liveEvent = isEvent ? liveEvents.find((e) => e.id === eventId) : null;
-
-  const isPlaylist = id?.startsWith("playlist-");
 
   const channel = useMemo(() => {
     if (isEvent && liveEvent) {
@@ -46,42 +38,29 @@ const Watch = () => {
     return channels.find((c) => c.id === id) || null;
   }, [isEvent, liveEvent, channels, id]);
 
-  const related = channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId);
+  const related = useMemo(() => 
+    channels.filter((c) => c.id !== id && c.categoryId === channel?.categoryId).slice(0, 6),
+    [channels, id, channel?.categoryId]
+  );
   const sameCategory = categories.find((c) => c.id === channel?.categoryId);
 
-  // Auto-detect player type from URL
   const detectedType = channel?.streamUrl ? detectPlayerType(channel.streamUrl) : "hls";
   const isHttpStream = detectedType === "external";
-  const isDash = detectedType === "dash";
 
-  // ScrollRestoration component handles scroll position
-
-  // Auto-show external player dialog for HTTP streams
   useEffect(() => {
-    if (isHttpStream && channel) {
-      setShowExternalDialog(true);
-    } else {
-      setShowExternalDialog(false);
-    }
+    if (isHttpStream && channel) setShowExternalDialog(true);
+    else setShowExternalDialog(false);
   }, [isHttpStream, channel?.id]);
-
-  const handleRelatedClick = (channelId: string) => {
-    navigate(`/watch/${channelId}`, { replace: true });
-  };
 
   const handleShare = async () => {
     try { await navigator.share({ title: channel?.name, url: window.location.href }); }
     catch { navigator.clipboard.writeText(window.location.href); toast.success("Link copied!"); }
   };
 
-
   if (loading || (isEvent && eventsLoading)) {
     return (
       <div className="min-h-screen pt-16 pb-20 container">
-        <div className="aspect-video skeleton-shimmer rounded-xl mb-6" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-        </div>
+        <div className="aspect-video skeleton-shimmer rounded-xl mb-4" />
       </div>
     );
   }
@@ -96,48 +75,39 @@ const Watch = () => {
 
   return (
     <div className="min-h-screen pt-16 pb-20">
-      <div className="container space-y-6 py-4">
+      <div className="container space-y-4 py-3">
+        {/* Top bar */}
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" /><span className="text-sm">Back</span>
           </Link>
-          <div className="flex gap-2">
-            <button onClick={() => setShowChat(!showChat)} className={`p-2 rounded-lg transition-all ${showChat ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}>
-              <MessageCircle className="w-5 h-5" />
-            </button>
-            {channel && (
-              <FavoriteButton
-                isFavorited={isFavorited(channel.id)}
-                onClick={(e) => { e.preventDefault(); toggleFavorite(channel); }}
-                size="md"
-              />
-            )}
+          <div className="flex gap-1.5">
+            <FavoriteButton
+              isFavorited={isFavorited(channel.id)}
+              onClick={(e) => { e.preventDefault(); toggleFavorite(channel); }}
+              size="md"
+            />
             <button onClick={handleShare} className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
               <Share2 className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <div ref={playerRef}>
-          {isHttpStream ? (
-            <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-4 p-6">
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-display font-bold text-foreground">{channel.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  This stream requires an external player for playback.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowExternalDialog(true)}
-                className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition-all animate-pulse"
-              >
-                ▶ Choose External Player
-              </button>
-            </div>
-          ) : (
-            <Player channel={channel} autoPlay={true} onFatalError={() => setShowExternalDialog(true)} />
-          )}
-        </div>
+        {/* Player */}
+        {isHttpStream ? (
+          <div className="aspect-video bg-secondary rounded-xl flex flex-col items-center justify-center gap-3">
+            <h3 className="text-base font-display font-bold text-foreground">{channel.name}</h3>
+            <p className="text-xs text-muted-foreground">Requires external player</p>
+            <button
+              onClick={() => setShowExternalDialog(true)}
+              className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all"
+            >
+              ▶ Open Player
+            </button>
+          </div>
+        ) : (
+          <Player channel={channel} autoPlay={true} onFatalError={() => setShowExternalDialog(true)} />
+        )}
 
         <ExternalPlayerDialog
           open={showExternalDialog}
@@ -146,12 +116,17 @@ const Watch = () => {
           channelName={channel.name}
         />
 
+        {/* Channel info */}
         <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-display font-bold text-foreground">{channel.name}</h1>
+            {sameCategory && <span className="text-xs text-primary">{sameCategory.icon} {sameCategory.name}</span>}
+          </div>
           <button
             onClick={() => setShowReport(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-all"
           >
-            <AlertTriangle className="w-3.5 h-3.5" /> Report Channel
+            <AlertTriangle className="w-3 h-3" /> Report
           </button>
         </div>
 
@@ -163,30 +138,14 @@ const Watch = () => {
           onClose={() => setShowReport(false)}
         />
 
-        <div className="glass-card p-4">
-          <h1 className="text-xl font-display font-bold text-foreground">{channel.name}</h1>
-          {sameCategory && <span className="text-xs text-primary mt-1 inline-block">{sameCategory.icon} {sameCategory.name}</span>}
-        </div>
-
-        {/* Channel Chat Panel */}
-        {showChat && (
-          <div className="glass-card rounded-xl overflow-hidden" style={{ height: "400px" }}>
-            <ChatPanel channelId={channel.id} channelName={channel.name} />
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PostsSection channelId={channel.id} />
-          <PollSection />
-        </div>
-
+        {/* Related */}
         {related.length > 0 && (
           <div>
-            <h2 className="text-lg font-display font-bold text-foreground mb-4">Related Channels</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <h2 className="text-sm font-display font-bold text-foreground mb-3">Related</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {related.map((ch) => (
-                <div key={ch.id} onClick={() => handleRelatedClick(ch.id)} className="cursor-pointer">
-                  <ChannelCard channel={ch} />
+                <div key={ch.id} onClick={() => navigate(`/watch/${ch.id}`, { replace: true })} className="cursor-pointer">
+                  <ChannelCard channel={ch} compact />
                 </div>
               ))}
             </div>

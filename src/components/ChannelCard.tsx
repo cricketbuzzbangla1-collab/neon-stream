@@ -1,85 +1,79 @@
 import { Link } from "react-router-dom";
-import { Channel, useCategories } from "@/hooks/useFirestore";
+import { Channel } from "@/hooks/useFirestore";
 import { Play } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import FavoriteButton from "@/components/FavoriteButton";
 
-const ChannelCard = ({ channel }: { channel: Channel }) => {
-  const { data: categories } = useCategories();
-  const category = categories.find((c) => c.id === channel.categoryId);
+const ChannelCard = memo(({ channel, compact }: { channel: Channel; compact?: boolean }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const { isFavorited, toggleFavorite } = useFavorites();
 
-  // Preload Watch page on hover/touch for instant navigation
   const handlePrefetch = useCallback(() => {
     import("../pages/Watch");
   }, []);
 
   return (
     <div className="relative">
-      {/* Favorite button overlay */}
-      <div className="absolute top-2 right-2 z-10">
+      <div className="absolute top-1.5 right-1.5 z-10">
         <FavoriteButton
           isFavorited={isFavorited(channel.id)}
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(channel); }}
+          size={compact ? "sm" : "sm"}
         />
       </div>
       <Link
         to={`/watch/${channel.id}`}
         onMouseEnter={handlePrefetch}
         onTouchStart={handlePrefetch}
-        className="group relative glass-card overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_hsl(var(--glow-primary)/0.25)] border border-border/30 hover:border-primary/50 block"
+        className={`group relative bg-card overflow-hidden rounded-xl transition-transform duration-200 hover:scale-[1.03] border border-border/20 block ${
+          compact ? "" : ""
+        }`}
       >
-      {/* Image */}
-      <div className="relative aspect-video bg-secondary overflow-hidden">
-        {!imgLoaded && channel.logo && (
-          <div className="absolute inset-0 skeleton-shimmer" />
-        )}
-        {channel.logo ? (
-          <img
-            src={channel.logo}
-            alt={channel.name}
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-card">
-            <span className="text-3xl font-display font-bold text-muted-foreground/50">
-              {channel.name?.charAt(0)}
-            </span>
-          </div>
-        )}
+        <div className="relative aspect-video bg-secondary overflow-hidden">
+          {!imgLoaded && channel.logo && (
+            <div className="absolute inset-0 skeleton-shimmer" />
+          )}
+          {channel.logo ? (
+            <img
+              src={channel.logo}
+              alt={channel.name}
+              className={`w-full h-full object-cover transition-opacity duration-200 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setImgLoaded(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-secondary">
+              <span className={`font-display font-bold text-muted-foreground/50 ${compact ? "text-xl" : "text-3xl"}`}>
+                {channel.name?.charAt(0)}
+              </span>
+            </div>
+          )}
 
-        {/* Play overlay on hover */}
-        <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/30 scale-75 group-hover:scale-100 transition-transform duration-300">
-            <Play className="w-5 h-5 text-primary-foreground fill-current ml-0.5" />
+          {/* Play overlay */}
+          <div className="absolute inset-0 bg-background/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-primary/90 flex items-center justify-center">
+              <Play className="w-4 h-4 text-primary-foreground fill-current ml-0.5" />
+            </div>
           </div>
+
+          {channel.isLive && (
+            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-destructive text-destructive-foreground flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-destructive-foreground animate-pulse" />
+              LIVE
+            </span>
+          )}
         </div>
 
-        {/* LIVE badge */}
-        {channel.isLive && (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-live-badge text-foreground live-pulse shadow-md shadow-destructive/30 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
-            LIVE
-          </span>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="p-3 space-y-1">
-        <h3 className="text-sm font-semibold text-foreground truncate">{channel.name}</h3>
-        {category && (
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 font-medium">
-            {category.icon} {category.name}
-          </span>
-        )}
-      </div>
+        <div className={`${compact ? "p-2" : "p-3"}`}>
+          <h3 className={`font-semibold text-foreground truncate ${compact ? "text-xs" : "text-sm"}`}>{channel.name}</h3>
+        </div>
       </Link>
     </div>
   );
-};
+});
+
+ChannelCard.displayName = "ChannelCard";
 
 export default ChannelCard;
