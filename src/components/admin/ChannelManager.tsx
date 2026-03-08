@@ -17,11 +17,46 @@ const ChannelManager = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
+  const [protocolFilter, setProtocolFilter] = useState<"all" | "http" | "https">("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const filtered = channels.filter(ch =>
-    ch.name?.toLowerCase().includes(search.toLowerCase()) ||
-    ch.streamUrl?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = channels.filter(ch => {
+    const matchSearch = ch.name?.toLowerCase().includes(search.toLowerCase()) ||
+      ch.streamUrl?.toLowerCase().includes(search.toLowerCase());
+    const matchProtocol = protocolFilter === "all" ||
+      (protocolFilter === "http" && ch.streamUrl?.startsWith("http://")) ||
+      (protocolFilter === "https" && ch.streamUrl?.startsWith("https://"));
+    return matchSearch && matchProtocol;
+  });
+
+  const httpCount = channels.filter(c => c.streamUrl?.startsWith("http://")).length;
+  const httpsCount = channels.filter(c => c.streamUrl?.startsWith("https://")).length;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(c => c.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    try {
+      await Promise.all([...selectedIds].map(id => deleteDocument("channels", id)));
+      setSelectedIds(new Set());
+      toast.success(`${count} channels deleted`);
+    } catch { toast.error("Error deleting channels"); }
+  };
 
   const handleSave = async () => {
     if (!form.name || !form.streamUrl) { toast.error("Name and Stream URL required"); return; }
@@ -51,10 +86,28 @@ const ChannelManager = () => {
 
   return (
     <div className="space-y-4">
+      {/* Protocol stats */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <button onClick={() => setProtocolFilter("all")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${protocolFilter === "all" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:opacity-80"}`}>
+          All ({channels.length})
+        </button>
+        <button onClick={() => setProtocolFilter("https")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${protocolFilter === "https" ? "bg-emerald-600 text-white" : "bg-emerald-500/10 text-emerald-500 hover:opacity-80"}`}>
+          🔒 HTTPS ({httpsCount})
+        </button>
+        <button onClick={() => setProtocolFilter("http")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${protocolFilter === "http" ? "bg-amber-600 text-white" : "bg-amber-500/10 text-amber-500 hover:opacity-80"}`}>
+          ⚠️ HTTP ({httpCount})
+        </button>
+      </div>
+
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => { setShowForm(true); setForm(empty); setEditId(null); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
           <Plus className="w-4 h-4" /> Add Channel
         </button>
+        {selectedIds.size > 0 && (
+          <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive text-destructive-foreground font-medium hover:opacity-90 transition-all duration-300">
+            <Trash2 className="w-4 h-4" /> Delete Selected ({selectedIds.size})
+          </button>
+        )}
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
@@ -65,6 +118,14 @@ const ChannelManager = () => {
           />
         </div>
       </div>
+
+      {/* Select all toggle */}
+      {filtered.length > 0 && (
+        <div className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleSelectAll} className="rounded" />
+          <span className="text-muted-foreground">Select all ({filtered.length})</span>
+        </div>
+      )}
 
       {showForm && (
         <div className="glass-card neon-border p-6 space-y-4">
@@ -118,21 +179,31 @@ const ChannelManager = () => {
           <p className="text-sm text-muted-foreground py-8 text-center">
             {search ? "No channels match your search" : "No channels added yet"}
           </p>
-        ) : filtered.map((ch) => (
-          <div key={ch.id} className="glass-card p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {ch.logo && <img src={ch.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />}
-              <div>
-                <p className="text-sm font-semibold text-foreground">{ch.name}</p>
-                <p className="text-xs text-muted-foreground">{ch.playerType} • {ch.isLive ? "🔴 Live" : "Offline"}</p>
+        ) : filtered.map((ch) => {
+          const isHttp = ch.streamUrl?.startsWith("http://");
+          return (
+            <div key={ch.id} className={`glass-card p-4 flex items-center justify-between ${isHttp ? "border border-amber-500/20" : ""}`}>
+              <div className="flex items-center gap-3">
+                <input type="checkbox" checked={selectedIds.has(ch.id)} onChange={() => toggleSelect(ch.id)} className="rounded shrink-0" />
+                {ch.logo && <img src={ch.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground truncate">{ch.name}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${isHttp ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`}>
+                      {isHttp ? "HTTP" : "HTTPS"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate max-w-[250px]">{ch.streamUrl}</p>
+                  <p className="text-xs text-muted-foreground">{ch.playerType} • {ch.isLive ? "🔴 Live" : "Offline"}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => handleEdit(ch)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Edit className="w-4 h-4" /></button>
+                <button onClick={() => handleDelete(ch.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => handleEdit(ch)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Edit className="w-4 h-4" /></button>
-              <button onClick={() => handleDelete(ch.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

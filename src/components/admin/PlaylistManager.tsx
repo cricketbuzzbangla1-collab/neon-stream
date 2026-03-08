@@ -482,6 +482,9 @@ const PlaylistManager = () => {
         </div>
       )}
 
+      {/* Stream Link Manager */}
+      <StreamLinkManager channels={channels} />
+
       {/* Export section */}
       <div className="glass-card neon-border p-4 space-y-3">
         <h3 className="font-display font-bold text-foreground text-sm">Export Channels</h3>
@@ -510,6 +513,113 @@ const PlaylistManager = () => {
           <p className="text-xs text-muted-foreground">{channels.length} channels currently in database</p>
         </div>
       )}
+    </div>
+  );
+};
+
+// Stream Link Manager sub-component
+const StreamLinkManager = ({ channels }: { channels: Channel[] }) => {
+  const [filter, setFilter] = useState<"all" | "http" | "https">("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const httpChannels = channels.filter(c => c.streamUrl?.startsWith("http://"));
+  const httpsChannels = channels.filter(c => c.streamUrl?.startsWith("https://"));
+
+  const filtered = channels.filter(c => {
+    const matchProtocol = filter === "all" ||
+      (filter === "http" && c.streamUrl?.startsWith("http://")) ||
+      (filter === "https" && c.streamUrl?.startsWith("https://"));
+    const matchSearch = !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.streamUrl?.toLowerCase().includes(search.toLowerCase());
+    return matchProtocol && matchSearch;
+  });
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(c => c.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    try {
+      await Promise.all([...selectedIds].map(id => deleteDocument("channels", id)));
+      setSelectedIds(new Set());
+      toast.success(`${count} channels deleted`);
+    } catch { toast.error("Error deleting"); }
+  };
+
+  const inputCls = "px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm";
+
+  return (
+    <div className="glass-card neon-border p-4 space-y-3">
+      <h3 className="font-display font-bold text-foreground text-sm">Stream Link Manager</h3>
+
+      {/* Protocol filter buttons */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <button onClick={() => setFilter("all")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === "all" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+          All ({channels.length})
+        </button>
+        <button onClick={() => setFilter("https")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === "https" ? "bg-emerald-600 text-white" : "bg-emerald-500/10 text-emerald-500"}`}>
+          🔒 HTTPS ({httpsChannels.length})
+        </button>
+        <button onClick={() => setFilter("http")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === "http" ? "bg-amber-600 text-white" : "bg-amber-500/10 text-amber-500"}`}>
+          ⚠️ HTTP ({httpChannels.length})
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search links..." className={`${inputCls} pl-9 w-full`} />
+        </div>
+        {selectedIds.size > 0 && (
+          <button onClick={handleBulkDelete} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:opacity-90">
+            <Trash2 className="w-3.5 h-3.5" /> Delete ({selectedIds.size})
+          </button>
+        )}
+      </div>
+
+      {filtered.length > 0 && (
+        <div className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="rounded" />
+          <span className="text-muted-foreground text-xs">Select all ({filtered.length})</span>
+        </div>
+      )}
+
+      <div className="space-y-1.5 max-h-[350px] overflow-y-auto">
+        {filtered.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">No links found</p>
+        ) : filtered.map(ch => {
+          const isHttp = ch.streamUrl?.startsWith("http://");
+          return (
+            <div key={ch.id} className={`flex items-center gap-2 p-2 rounded-lg bg-secondary/50 ${isHttp ? "border border-amber-500/20" : ""}`}>
+              <input type="checkbox" checked={selectedIds.has(ch.id)} onChange={() => toggleSelect(ch.id)} className="rounded shrink-0" />
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${isHttp ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`}>
+                {isHttp ? "HTTP" : "HTTPS"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{ch.name}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{ch.streamUrl}</p>
+              </div>
+              <button onClick={async () => { await deleteDocument("channels", ch.id); toast.success("Deleted"); }} className="p-1.5 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive shrink-0">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
