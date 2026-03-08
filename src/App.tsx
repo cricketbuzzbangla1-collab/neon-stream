@@ -8,8 +8,9 @@ import Navbar from "@/components/Navbar";
 import ScrollRestoration from "@/components/ScrollRestoration";
 import { lazy, Suspense } from "react";
 
-// Lazy load all route pages
 const Index = lazy(() => import("./pages/Index"));
+const Channels = lazy(() => import("./pages/Channels"));
+const Chat = lazy(() => import("./pages/Chat"));
 const Watch = lazy(() => import("./pages/Watch"));
 const Search = lazy(() => import("./pages/Search"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -23,8 +24,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes cache
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
     },
@@ -33,7 +34,7 @@ const queryClient = new QueryClient({
 
 const PageLoader = () => (
   <div className="min-h-screen pt-16 pb-20 flex items-center justify-center">
-    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
   </div>
 );
 
@@ -47,6 +48,8 @@ const AppContent = () => {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/channels" element={<Channels />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="/watch/:id" element={<Watch />} />
           <Route path="/search" element={<Search />} />
           <Route path="/admin" element={<Admin />} />

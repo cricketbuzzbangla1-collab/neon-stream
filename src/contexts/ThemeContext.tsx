@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useAuth } from "@/contexts/AuthContext";
 
-export type ThemeType = "dark-neon" | "dark-blue" | "amoled" | "light";
+export type ThemeType = "dark-neon" | "light";
 
 interface ThemeContextType {
   theme: ThemeType;
@@ -19,7 +18,7 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
-const VALID_THEMES: ThemeType[] = ["dark-neon", "dark-blue", "amoled", "light"];
+const VALID_THEMES: ThemeType[] = ["dark-neon", "light"];
 const isValidTheme = (t: any): t is ThemeType => VALID_THEMES.includes(t);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,7 +29,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [adminDefault, setAdminDefault] = useState<ThemeType | null>(null);
 
-  // Listen to admin default theme
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "appSettings", "main"), (snap) => {
       if (snap.exists()) {
@@ -41,7 +39,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return unsub;
   }, []);
 
-  // On first load: if no user preference stored, use admin default
   useEffect(() => {
     if (adminDefault && !localStorage.getItem("ott-theme")) {
       setThemeState(adminDefault);
@@ -51,18 +48,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setTheme = useCallback((t: ThemeType) => {
     if (t === theme) return;
-    // Trigger transition animation
     setIsTransitioning(true);
-    document.documentElement.classList.add("theme-transitioning");
-
     setThemeState(t);
     localStorage.setItem("ott-theme", t);
     document.documentElement.setAttribute("data-theme", t);
 
-    // Save to Firestore for logged-in users (fire and forget)
     try {
-      const authModule = import("firebase/auth");
-      authModule.then(({ getAuth }) => {
+      import("firebase/auth").then(({ getAuth }) => {
         const currentUser = getAuth().currentUser;
         if (currentUser) {
           setDoc(doc(db, "users", currentUser.uid), { theme: t }, { merge: true }).catch(() => {});
@@ -70,18 +62,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     } catch {}
 
-    setTimeout(() => {
-      setIsTransitioning(false);
-      document.documentElement.classList.remove("theme-transitioning");
-    }, 400);
+    setTimeout(() => setIsTransitioning(false), 300);
   }, [theme]);
 
-  // Apply theme attribute on mount
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, []);
 
-  // Load user's saved theme from Firestore on auth change
   useEffect(() => {
     const loadUserTheme = async () => {
       try {
@@ -100,8 +87,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       } catch {}
     };
-
-    // Small delay to let auth settle
     const timer = setTimeout(loadUserTheme, 1000);
     return () => clearTimeout(timer);
   }, []);
