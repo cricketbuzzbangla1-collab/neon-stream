@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Tv, MessageCircle, Palette, User, LogOut, Send, Heart } from "lucide-react";
+import { Home, Tv, MessageCircle, ListMusic, Palette, User, LogOut, Send, Heart } from "lucide-react";
 import { useTheme, ThemeType } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/hooks/useFirestore";
@@ -24,6 +24,7 @@ const Navbar = () => {
     { to: "/", icon: Home, label: "Home" },
     { to: "/channels", icon: Tv, label: "Channels" },
     { to: "/chat", icon: MessageCircle, label: "Chat" },
+    { to: "/my-playlist", icon: ListMusic, label: "Playlist" },
   ];
 
   return (
@@ -93,7 +94,7 @@ const Navbar = () => {
       </header>
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t border-border/30 md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t border-border/30">
         <div className="flex items-center justify-around h-14">
           {navItems.map((item) => {
             const active = location.pathname === item.to;
