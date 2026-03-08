@@ -35,6 +35,15 @@ const Watch = () => {
     try {
       await deleteDoc(doc(db, "channels", channel.id));
       toast.success("Channel deleted successfully");
+      // Navigate to next channel instead of homepage
+      if (channelList.length > 1 && currentIndex !== -1) {
+        const nextIndex = currentIndex < channelList.length - 1 ? currentIndex + 1 : currentIndex - 1;
+        const nextCh = channelList[nextIndex];
+        if (nextCh && nextCh.id !== channel.id) {
+          navigate(`/watch/${nextCh.id}`, { replace: true });
+          return;
+        }
+      }
       navigate("/", { replace: true });
     } catch {
       toast.error("Failed to delete channel");
