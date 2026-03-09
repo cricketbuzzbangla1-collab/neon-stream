@@ -19,6 +19,7 @@ const Register = lazy(() => import("./pages/Register"));
 const MyPlaylist = lazy(() => import("./pages/MyPlaylist"));
 const PlaylistWatch = lazy(() => import("./pages/PlaylistWatch"));
 const Favorites = lazy(() => import("./pages/Favorites"));
+const TopChannels = lazy(() => import("./pages/TopChannels"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
