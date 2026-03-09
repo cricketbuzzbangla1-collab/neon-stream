@@ -27,6 +27,7 @@ const Watch = () => {
   const { isFavorited, toggleFavorite } = useFavorites();
   const { isAdmin } = useAuth();
   const [deleting, setDeleting] = useState(false);
+  const { isTopChannel, toggleTopChannel } = useTopChannels();
 
   const handleDeleteChannel = async () => {
     if (!channel || !isAdmin) return;
