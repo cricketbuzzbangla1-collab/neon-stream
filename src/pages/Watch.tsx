@@ -3,7 +3,8 @@ import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore"
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
 import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
-import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Crown } from "lucide-react";
+import { useTopChannels } from "@/hooks/useTopChannels";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { detectPlayerType } from "@/lib/detectPlayerType";
