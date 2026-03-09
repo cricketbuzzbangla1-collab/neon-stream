@@ -19,7 +19,6 @@ const Register = lazy(() => import("./pages/Register"));
 const MyPlaylist = lazy(() => import("./pages/MyPlaylist"));
 const PlaylistWatch = lazy(() => import("./pages/PlaylistWatch"));
 const Favorites = lazy(() => import("./pages/Favorites"));
-const TopChannels = lazy(() => import("./pages/TopChannels"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -57,7 +56,6 @@ const AppContent = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/favorites" element={<Favorites />} />
-          <Route path="/top-channels" element={<TopChannels />} />
           <Route path="/my-playlist" element={<MyPlaylist />} />
           <Route path="/playlist/:playlistId/:channelIndex" element={<PlaylistWatch />} />
           <Route path="*" element={<NotFound />} />

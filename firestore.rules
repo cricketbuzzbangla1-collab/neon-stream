@@ -183,14 +183,5 @@ service cloud.firestore {
       allow delete: if isLoggedIn() && request.auth.uid == uid;
     }
 
-    // --------------------
-    // TOP CHANNELS (Admin curated, public read)
-    // --------------------
-
-    match /topChannels/{channelId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
   }
 }

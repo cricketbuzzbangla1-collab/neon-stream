@@ -3,8 +3,7 @@ import { useChannels, useCategories, useLiveEvents } from "@/hooks/useFirestore"
 import Player from "@/components/Player";
 import ChannelCard from "@/components/ChannelCard";
 import ExternalPlayerDialog from "@/components/ExternalPlayerDialog";
-import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Crown } from "lucide-react";
-import { useTopChannels } from "@/hooks/useTopChannels";
+import { ArrowLeft, Share2, AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { detectPlayerType } from "@/lib/detectPlayerType";
@@ -27,7 +26,6 @@ const Watch = () => {
   const { isFavorited, toggleFavorite } = useFavorites();
   const { isAdmin } = useAuth();
   const [deleting, setDeleting] = useState(false);
-  const { isTopChannel, toggleTopChannel } = useTopChannels();
 
   const handleDeleteChannel = async () => {
     if (!channel || !isAdmin) return;
@@ -210,25 +208,13 @@ const Watch = () => {
             <AlertTriangle className="w-3 h-3" /> Report
           </button>
           {isAdmin && !isEvent && (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => toggleTopChannel(channel)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  isTopChannel(channel.id)
-                    ? "bg-primary/20 text-primary"
-                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                }`}
-              >
-                <Crown className="w-3 h-3" /> {isTopChannel(channel.id) ? "Top ✓" : "Set Top"}
-              </button>
-              <button
-                onClick={handleDeleteChannel}
-                disabled={deleting}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-all disabled:opacity-50"
-              >
-                <Trash2 className="w-3 h-3" /> {deleting ? "..." : "Delete"}
-              </button>
-            </div>
+            <button
+              onClick={handleDeleteChannel}
+              disabled={deleting}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-all disabled:opacity-50"
+            >
+              <Trash2 className="w-3 h-3" /> {deleting ? "Deleting..." : "Delete Channel"}
+            </button>
           )}
         </div>
 
