@@ -15,7 +15,7 @@ const SettingsManager = () => {
     noticeLink: "",
     defaultTheme: "dark-neon",
     adsEnabled: false,
-    footballApiKey: "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+    footballApiKey: "e4df9b4f6d364f2d9950728666d9a897",
     footballApiEnabled: true,
     footballApiCallsPerHour: 3,
   });
@@ -35,7 +35,7 @@ const SettingsManager = () => {
           noticeLink: data.noticeLink || "",
           defaultTheme: data.defaultTheme || "dark-neon",
           adsEnabled: data.adsEnabled || false,
-          footballApiKey: data.footballApiKey || "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+          footballApiKey: data.footballApiKey || "e4df9b4f6d364f2d9950728666d9a897",
           footballApiEnabled: data.footballApiEnabled !== false,
           footballApiCallsPerHour: data.footballApiCallsPerHour || 3,
         });
@@ -136,7 +136,7 @@ const SettingsManager = () => {
 
       {/* Football API */}
       <div className="space-y-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
-        <h4 className="text-sm font-semibold text-foreground">⚽ Football API (apifootball.com)</h4>
+        <h4 className="text-sm font-semibold text-foreground">⚽ Football API (football-data.org)</h4>
         <label className="flex items-center gap-2 text-sm text-foreground">
           <input type="checkbox" checked={form.footballApiEnabled} onChange={(e) => setForm({ ...form, footballApiEnabled: e.target.checked })} className="rounded" />
           Enable Auto Football Matches
@@ -150,7 +150,7 @@ const SettingsManager = () => {
             placeholder="Enter apifootball.com API key"
           />
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            Get your key from apifootball.com — auto-fetches live & upcoming matches
+            Get your key from football-data.org — auto-fetches live & upcoming matches
           </p>
         </div>
         <div>

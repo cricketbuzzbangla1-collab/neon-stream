@@ -20,34 +20,24 @@ export interface FootballMatch {
   country: string;
   stadium: string;
   round: string;
-  startTimestamp: number; // parsed start_time for sorting/countdown
+  startTimestamp: number;
 }
 
-const DEFAULT_API_KEY = "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7";
-const API_BASE = "https://apiv3.apifootball.com/";
+const API_BASE = "https://api.football-data.org/v4";
 
-// Allowed leagues with IDs and names
-export const ALLOWED_LEAGUES: Record<string, { name: string; country: string }> = {
-  "152": { name: "Premier League", country: "England" },
-  "302": { name: "La Liga", country: "Spain" },
-  "207": { name: "Serie A", country: "Italy" },
-  "175": { name: "Bundesliga", country: "Germany" },
-  "168": { name: "Ligue 1", country: "France" },
-  "278": { name: "Saudi Pro League", country: "Saudi Arabia" },
-  "332": { name: "Major League Soccer", country: "USA" },
-  "3":   { name: "UEFA Champions League", country: "Europe" },
-  "4":   { name: "UEFA Europa League", country: "Europe" },
-  "683": { name: "UEFA Europa Conference League", country: "Europe" },
-  "10":  { name: "UEFA Nations League", country: "Europe" },
+// football-data.org competition codes (free tier)
+export const ALLOWED_LEAGUES: Record<string, { name: string; country: string; code: string }> = {
+  "PL":  { name: "Premier League", country: "England", code: "PL" },
+  "PD":  { name: "La Liga", country: "Spain", code: "PD" },
+  "SA":  { name: "Serie A", country: "Italy", code: "SA" },
+  "BL1": { name: "Bundesliga", country: "Germany", code: "BL1" },
+  "FL1": { name: "Ligue 1", country: "France", code: "FL1" },
+  "CL":  { name: "UEFA Champions League", country: "Europe", code: "CL" },
+  "EC":  { name: "European Championship", country: "Europe", code: "EC" },
+  "WC":  { name: "FIFA World Cup", country: "World", code: "WC" },
 };
 
-const ALL_LEAGUE_IDS = Object.keys(ALLOWED_LEAGUES);
-
-function getToday(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-// --- Rate Limiting (localStorage, per hour) ---
+// --- Rate Limiting ---
 const RATE_KEY = "football_api_rate_hourly";
 
 function getCurrentHour(): string {
@@ -73,7 +63,7 @@ function incrementRate(maxPerHour: number): boolean {
   return true;
 }
 
-// --- Smart Cache ---
+// --- Cache ---
 interface MatchCache {
   data: FootballMatch[];
   ts: number;
@@ -87,35 +77,68 @@ function getCacheTTL(): number {
   return 30 * 60 * 1000;
 }
 
-function parseMatchTimestamp(date: string, time: string): number {
-  const [year, month, day] = date.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
-  return new Date(year, month - 1, day, hour, minute).getTime();
+// Map football-data.org status to display status
+function mapStatus(status: string): { displayStatus: string; isLive: boolean } {
+  switch (status) {
+    case "IN_PLAY":
+    case "HALFTIME":
+    case "EXTRA_TIME":
+    case "PENALTY_SHOOTOUT":
+      return { displayStatus: status === "HALFTIME" ? "HT" : status === "IN_PLAY" ? "LIVE" : status, isLive: true };
+    case "PAUSED":
+      return { displayStatus: "HT", isLive: true };
+    case "FINISHED":
+    case "AWARDED":
+      return { displayStatus: "Finished", isLive: false };
+    case "TIMED":
+    case "SCHEDULED":
+      return { displayStatus: "", isLive: false };
+    case "POSTPONED":
+      return { displayStatus: "Postponed", isLive: false };
+    case "CANCELLED":
+      return { displayStatus: "Cancelled", isLive: false };
+    case "SUSPENDED":
+      return { displayStatus: "Suspended", isLive: false };
+    default:
+      return { displayStatus: "", isLive: false };
+  }
 }
 
 function parseMatch(m: any): FootballMatch {
-  const matchDate = m.match_date || "";
-  const matchTime = m.match_time || "";
+  const utcDate = m.utcDate || "";
+  const startTs = new Date(utcDate).getTime();
+  const matchDate = utcDate.split("T")[0] || "";
+  const d = new Date(utcDate);
+  const matchTime = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+
+  const { displayStatus, isLive } = mapStatus(m.status || "");
+  const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? "";
+  const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? "";
+
   return {
-    id: m.match_id,
-    homeTeam: m.match_hometeam_name || "",
-    awayTeam: m.match_awayteam_name || "",
-    homeLogo: m.team_home_badge || "",
-    awayLogo: m.team_away_badge || "",
-    homeScore: m.match_hometeam_score || "",
-    awayScore: m.match_awayteam_score || "",
+    id: String(m.id),
+    homeTeam: m.homeTeam?.shortName || m.homeTeam?.name || "",
+    awayTeam: m.awayTeam?.shortName || m.awayTeam?.name || "",
+    homeLogo: m.homeTeam?.crest || "",
+    awayLogo: m.awayTeam?.crest || "",
+    homeScore: homeScore !== null && homeScore !== "" ? String(homeScore) : "",
+    awayScore: awayScore !== null && awayScore !== "" ? String(awayScore) : "",
     matchTime,
     matchDate,
-    matchStatus: m.match_status || "",
-    isLive: m.match_live === "1",
-    league: m.league_name || "",
-    leagueId: m.league_id || "",
-    leagueLogo: m.league_logo || "",
-    country: m.country_name || "",
-    stadium: m.match_stadium || "",
-    round: m.match_round || "",
-    startTimestamp: parseMatchTimestamp(matchDate, matchTime),
+    matchStatus: displayStatus,
+    isLive,
+    league: m.competition?.name || "",
+    leagueId: m.competition?.code || "",
+    leagueLogo: m.competition?.emblem || "",
+    country: m.area?.name || "",
+    stadium: m.venue || "",
+    round: m.matchday ? `Matchday ${m.matchday}` : "",
+    startTimestamp: startTs,
   };
+}
+
+function getToday(): string {
+  return new Date().toISOString().split("T")[0];
 }
 
 function getTomorrow(): string {
@@ -124,7 +147,6 @@ function getTomorrow(): string {
   return d.toISOString().split("T")[0];
 }
 
-// Helper to get minutes until match starts
 export function getMinutesUntilStart(startTs: number): number {
   return (startTs - Date.now()) / 60000;
 }
@@ -132,7 +154,7 @@ export function getMinutesUntilStart(startTs: number): number {
 export function useFootballMatches() {
   const [matches, setMatches] = useState<FootballMatch[]>(matchCache?.data || []);
   const [loading, setLoading] = useState(!matchCache);
-  const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
+  const [apiKey, setApiKey] = useState<string>("");
   const [enabled, setEnabled] = useState(true);
   const [disabledLeagues, setDisabledLeagues] = useState<string[]>([]);
   const [maxCallsPerHour, setMaxCallsPerHour] = useState(3);
@@ -181,28 +203,40 @@ export function useFootballMatches() {
     try {
       const today = getToday();
       const tomorrow = getTomorrow();
-      const leagueIds = ALL_LEAGUE_IDS.join(",");
 
-      const url = `${API_BASE}?action=get_events&from=${today}&to=${tomorrow}&league_id=${leagueIds}&APIkey=${apiKey}`;
-      const res = await fetch(url);
+      const url = `${API_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
+      const res = await fetch(url, {
+        headers: { "X-Auth-Token": apiKey },
+      });
+
+      if (!res.ok) {
+        console.error(`Football API error: ${res.status} ${res.statusText}`);
+        if (matchCache) setMatches(matchCache.data);
+        setLoading(false);
+        return;
+      }
+
       const json = await res.json();
 
-      if (Array.isArray(json)) {
-        const parsed = json
+      if (json.matches && Array.isArray(json.matches)) {
+        // Filter only allowed competitions
+        const allowedCodes = Object.keys(ALLOWED_LEAGUES);
+        const parsed = json.matches
+          .filter((m: any) => allowedCodes.includes(m.competition?.code))
           .map(parseMatch)
-          .filter(m => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
+          .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
 
-        parsed.sort((a, b) => {
+        parsed.sort((a: FootballMatch, b: FootballMatch) => {
           if (a.isLive && !b.isLive) return -1;
           if (!a.isLive && b.isLive) return 1;
           return a.startTimestamp - b.startTimestamp;
         });
 
-        const hasLive = parsed.some(m => m.isLive);
+        const hasLive = parsed.some((m: FootballMatch) => m.isLive);
         matchCache = { data: parsed, ts: Date.now(), hasLive };
         setMatches(parsed);
 
-        console.log(`⚽ Football API: Fetched ${parsed.length} matches (${getRateInfo().count}/${maxCallsPerHour} calls this hour)`);
+        console.log(`⚽ Football API (football-data.org): Fetched ${parsed.length} matches (${getRateInfo().count}/${maxCallsPerHour} calls this hour)`);
       } else {
         matchCache = { data: [], ts: Date.now(), hasLive: false };
         setMatches([]);
