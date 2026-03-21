@@ -196,19 +196,51 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   const targetUrl = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
 
   try {
-    const res = await fetch(targetUrl, {
-      headers: { "X-Auth-Token": apiKey },
-      mode: "cors",
-    });
+    let json: any = null;
 
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => "");
-      console.error(`football-data.org error ${res.status}: ${errorText}`);
-      return [];
+    // Try direct CORS first
+    try {
+      const res = await fetch(targetUrl, {
+        headers: { "X-Auth-Token": apiKey },
+        mode: "cors",
+      });
+      if (res.ok) {
+        json = await res.json();
+      } else {
+        console.warn(`football-data.org direct: ${res.status}`);
+      }
+    } catch (e) {
+      console.warn("football-data.org direct CORS blocked, trying proxy...");
     }
 
-    const json = await res.json();
-    if (!json.matches || !Array.isArray(json.matches)) return [];
+    // Fallback: allorigins proxy
+    if (!json) {
+      try {
+        const proxyRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, {
+          headers: { "X-Auth-Token": apiKey },
+        });
+        if (proxyRes.ok) {
+          json = await proxyRes.json();
+        }
+      } catch (e) {
+        console.warn("allorigins proxy failed, trying corsproxy.io...");
+      }
+    }
+
+    // Fallback 2: corsproxy.io
+    if (!json) {
+      const proxyRes2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
+        headers: { "X-Auth-Token": apiKey },
+      });
+      if (proxyRes2.ok) {
+        json = await proxyRes2.json();
+      } else {
+        console.error(`football-data.org all proxies failed: ${proxyRes2.status}`);
+        return [];
+      }
+    }
+
+    if (!json?.matches || !Array.isArray(json.matches)) return [];
 
     const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
     return json.matches
