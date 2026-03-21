@@ -250,10 +250,12 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
 
   console.error(`football-data.org: All fetch attempts failed. Last error:`, lastError);
   return [];
-  const json = await res.json();
-  if (!json.matches || !Array.isArray(json.matches)) return [];
+}
+
+// Helper to filter football-data.org raw matches
+function filterFootballdataMatches(rawMatches: any[]): FootballMatch[] {
   const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
-  return json.matches
+  return rawMatches
     .filter((m: any) => allowedCodes.includes(m.competition?.code))
     .map(parseFootballdataMatch)
     .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
