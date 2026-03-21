@@ -107,7 +107,7 @@ const Index = () => {
               </h2>
               <div className="flex flex-col gap-3">
                 {upcomingEvents.map(ev => (
-                  <LiveEventCard key={ev.id} event={ev} />
+                  <LiveEventCard key={ev.id} event={ev} now={tick} />
                 ))}
               </div>
             </section>
