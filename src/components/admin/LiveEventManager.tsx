@@ -312,7 +312,7 @@ const LiveEventManager = () => {
             <p className="text-sm text-muted-foreground text-center py-8">No upcoming/live matches from API right now.</p>
           ) : (
             <div className="space-y-2">
-              {activeApiMatches.map(match => {
+              {activeApiMatches.filter(m => !hiddenMatches.has(m.id)).map(match => {
                 const imported = isAlreadyImported(match);
                 const existingEvent = imported ? findMatchingEvent(match) : null;
                 const hasStream = existingEvent?.streamUrl ? true : false;
