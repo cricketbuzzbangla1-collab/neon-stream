@@ -181,45 +181,43 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
         )}
       </div>
 
-      <div className="relative z-[1] px-4 py-3">
+      <div className="relative z-[1] px-3 py-2">
         {/* League header */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-1.5 mb-2">
           {match.leagueLogo && (
-            <img src={match.leagueLogo} alt="" className="w-4 h-4 object-contain rounded-sm" loading="lazy" />
+            <img src={match.leagueLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-sm" loading="lazy" />
           )}
-          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider truncate">
+          <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider truncate">
             {match.league}
           </span>
         </div>
 
         {/* Teams */}
         <div className="flex items-center">
-          <div className="flex-1 flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
               {match.homeLogo ? (
-                <img src={match.homeLogo} alt={match.homeTeam} className="w-8 h-8 object-contain" loading="lazy" />
+                <img src={match.homeLogo} alt={match.homeTeam} className="w-6 h-6 object-contain" loading="lazy" />
               ) : (
-                <span className="text-sm font-bold text-muted-foreground">{match.homeTeam.charAt(0)}</span>
+                <span className="text-[10px] font-bold text-muted-foreground">{match.homeTeam.charAt(0)}</span>
               )}
             </div>
-            <span className="text-xs font-bold text-foreground truncate">{match.homeTeam}</span>
+            <span className="text-[10px] font-bold text-foreground truncate leading-tight">{match.homeTeam}</span>
           </div>
 
           {/* Center: Score + Live Minute / Match Time */}
-          <div className="flex flex-col items-center shrink-0 mx-3 min-w-[56px]">
+          <div className="flex flex-col items-center shrink-0 mx-2 min-w-[50px]">
             {isLive ? (
               <>
-                {/* Live minute badge */}
-                <div className="flex items-center gap-1 bg-destructive/20 border border-destructive/40 px-2 py-0.5 rounded-full mb-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
-                  <span className="text-[9px] font-mono font-black tabular-nums text-destructive">
+                <div className="flex items-center gap-1 bg-destructive/20 border border-destructive/40 px-1.5 py-0.5 rounded-full mb-0.5">
+                  <span className="w-1 h-1 rounded-full bg-destructive animate-pulse" />
+                  <span className="text-[8px] font-mono font-black tabular-nums text-destructive">
                     {liveMinute ? `${liveMinute}'` : "LIVE"}
                   </span>
                 </div>
-                {/* Score */}
                 {hasScore && (
-                  <div className="bg-destructive/15 border border-destructive/30 px-3.5 py-1.5 rounded-xl">
-                    <span className="text-lg font-black tabular-nums tracking-widest text-destructive">
+                  <div className="bg-destructive/15 border border-destructive/30 px-2.5 py-1 rounded-lg">
+                    <span className="text-base font-black tabular-nums tracking-widest text-destructive">
                       {match.homeScore} - {match.awayScore}
                     </span>
                   </div>
@@ -227,42 +225,40 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
               </>
             ) : (
               <>
-                {/* Match kickoff time */}
-                <div className="bg-secondary/80 border border-border/40 px-3 py-1.5 rounded-xl">
-                  <span className="text-sm font-black tabular-nums text-foreground tracking-wide">
+                <div className="bg-secondary/80 border border-border/40 px-2.5 py-1 rounded-lg">
+                  <span className="text-xs font-black tabular-nums text-foreground tracking-wide">
                     {match.matchTime}
                   </span>
                 </div>
-                {/* Countdown */}
                 {countdown && (
-                  <div className={`mt-1.5 flex items-center gap-1 ${getCountdownBg()} border ${minutesUntil <= 10 ? "border-destructive/30" : minutesUntil <= 30 ? "border-yellow-500/30" : "border-primary/20"} px-2 py-0.5 rounded-full`}>
-                    <Clock className={`w-2.5 h-2.5 ${getCountdownColor()}`} />
-                    <span className={`text-[9px] font-mono font-bold tabular-nums ${getCountdownColor()}`}>{countdown}</span>
+                  <div className={`mt-1 flex items-center gap-0.5 ${getCountdownBg()} border ${minutesUntil <= 10 ? "border-destructive/30" : minutesUntil <= 30 ? "border-yellow-500/30" : "border-primary/20"} px-1.5 py-0.5 rounded-full`}>
+                    <Clock className={`w-2 h-2 ${getCountdownColor()}`} />
+                    <span className={`text-[8px] font-mono font-bold tabular-nums ${getCountdownColor()}`}>{countdown}</span>
                   </div>
                 )}
               </>
             )}
           </div>
 
-          <div className="flex-1 flex items-center gap-2.5 min-w-0 justify-end">
-            <span className="text-xs font-bold text-foreground truncate text-right">{match.awayTeam}</span>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
+          <div className="flex-1 flex items-center gap-2 min-w-0 justify-end">
+            <span className="text-[10px] font-bold text-foreground truncate text-right leading-tight">{match.awayTeam}</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
               {match.awayLogo ? (
-                <img src={match.awayLogo} alt={match.awayTeam} className="w-8 h-8 object-contain" loading="lazy" />
+                <img src={match.awayLogo} alt={match.awayTeam} className="w-6 h-6 object-contain" loading="lazy" />
               ) : (
-                <span className="text-sm font-bold text-muted-foreground">{match.awayTeam.charAt(0)}</span>
+                <span className="text-[10px] font-bold text-muted-foreground">{match.awayTeam.charAt(0)}</span>
               )}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/10">
-          <span className="text-[9px] text-muted-foreground/70">
+        <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-border/10">
+          <span className="text-[8px] text-muted-foreground/70">
             {match.matchDate}
           </span>
           {match.stadium && (
-            <span className="text-[8px] text-muted-foreground/50 truncate max-w-[140px]">
+            <span className="text-[7px] text-muted-foreground/50 truncate max-w-[120px]">
               🏟 {match.stadium}
             </span>
           )}
