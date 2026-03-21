@@ -212,14 +212,14 @@ const SettingsManager = () => {
           <label className="text-xs text-muted-foreground mb-1 block">API Calls Per Hour (Max)</label>
           <input
             type="number"
-            min={1}
-            max={10}
+            min={0}
+            max={100000000}
             value={form.footballApiCallsPerHour}
-            onChange={(e) => setForm({ ...form, footballApiCallsPerHour: Math.max(1, Math.min(10, parseInt(e.target.value) || 3)) })}
+            onChange={(e) => setForm({ ...form, footballApiCallsPerHour: Math.max(0, Math.min(100000000, parseInt(e.target.value) || 0)) })}
             className={inputCls}
           />
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            প্রতি ঘণ্টায় সর্বোচ্চ কতবার API call হবে (ডিফল্ট: 3, সর্বোচ্চ: 10)
+            প্রতি ঘণ্টায় সর্বোচ্চ কতবার API call হবে (0 = unlimited)
           </p>
         </div>
       </div>
