@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { LiveEvent, useCountries } from "@/hooks/useFirestore";
 import { useNavigate } from "react-router-dom";
-import { Play, Clock, Flame, Zap } from "lucide-react";
+import { Play, Clock, Zap } from "lucide-react";
 
 export const getEventStatus = (event: LiveEvent): "live" | "upcoming" | "finished" => {
   const ms = event.manualStatus;
@@ -36,16 +36,20 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
     return "finished";
   })();
 
-  const countdown = () => {
+  const getCountdown = () => {
     if (status !== "upcoming") return null;
     const diff = event.startTime - now;
     if (diff <= 0) return null;
-    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    if (d > 0) return { text: `${d}d ${h}h ${m}m`, short: `${d}d ${h}h` };
+    if (h > 0) return { text: `${h}h ${m}m ${s}s`, short: `${h}h ${m}m` };
+    return { text: `${m}m ${s}s`, short: `${m}:${s.toString().padStart(2, "0")}` };
   };
 
+  const countdown = getCountdown();
   const isLive = status === "live";
   const isFeatured = event.isFeatured;
 
@@ -60,7 +64,7 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
           : "ring-1 ring-border/20 shadow-sm"
       }`}
     >
-      {/* Background gradient */}
+      {/* Background */}
       <div className={`absolute inset-0 ${
         isLive
           ? "bg-gradient-to-br from-destructive/10 via-card to-destructive/5"
@@ -69,12 +73,10 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
           : "bg-card"
       }`} />
 
-      {/* Live pulse bar */}
       {isLive && (
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
       )}
 
-      {/* Featured badge */}
       {isFeatured && (
         <div className="absolute top-2 left-2 z-10">
           <div className="bg-primary text-primary-foreground px-2 py-0.5 text-[7px] font-bold uppercase tracking-widest rounded-full flex items-center gap-1 shadow-md">
@@ -90,6 +92,11 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
             <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
             ON AIR
           </div>
+        ) : countdown ? (
+          <div className="bg-primary/15 text-primary px-2.5 py-1 text-[8px] font-bold rounded-full flex items-center gap-1 border border-primary/20">
+            <Clock className="w-2.5 h-2.5" />
+            {countdown.short}
+          </div>
         ) : (
           <div className="bg-secondary text-muted-foreground px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
             <Clock className="w-2.5 h-2.5" /> Soon
@@ -98,7 +105,6 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
       </div>
 
       <div className="relative z-[1] px-4 py-3.5">
-        {/* Country/League info */}
         {country && (
           <div className="flex items-center gap-1.5 mb-3">
             <span className="text-sm">{country.flag}</span>
@@ -108,7 +114,6 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
 
         {/* Teams row */}
         <div className="flex items-center">
-          {/* Home */}
           <div className="flex-1 flex items-center gap-2.5 min-w-0">
             <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden border-2 shrink-0 bg-secondary/50 ${
               isLive ? "border-destructive/30" : "border-border/30"
@@ -127,14 +132,17 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
             <div className={`px-3 py-1.5 rounded-xl ${isLive ? "bg-destructive/15" : "bg-secondary/60"}`}>
               <span className={`text-sm font-black ${isLive ? "text-destructive" : "text-primary"}`}>VS</span>
             </div>
-            {status === "upcoming" && countdown() && (
-              <span className="text-[9px] font-mono font-bold text-primary tabular-nums mt-1 bg-primary/10 px-2 py-0.5 rounded-full">
-                {countdown()}
-              </span>
+            {/* Countdown timer below VS */}
+            {countdown && (
+              <div className="mt-1.5 flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-full">
+                <Clock className="w-2.5 h-2.5 text-primary" />
+                <span className="text-[9px] font-mono font-bold text-primary tabular-nums">
+                  {countdown.text}
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Away */}
           <div className="flex-1 flex items-center gap-2.5 min-w-0 justify-end">
             <span className="text-xs font-bold text-foreground truncate text-right leading-tight">{teamBName}</span>
             <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden border-2 shrink-0 bg-secondary/50 ${
