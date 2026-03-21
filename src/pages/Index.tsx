@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useLiveEvents } from "@/hooks/useFirestore";
+import { useState, useEffect, useRef } from "react";
+import { useLiveEvents, updateDocument } from "@/hooks/useFirestore";
 import { useFootballMatches } from "@/hooks/useFootballAPI";
 import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
@@ -15,10 +15,25 @@ const Index = () => {
   const [, setTick] = useState(0);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
+  const cleanedRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const t = setInterval(() => setTick(n => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Auto-deactivate finished liveEvents
+  useEffect(() => {
+    liveEvents.forEach(ev => {
+      if (!ev.isActive) return;
+      if (cleanedRef.current.has(ev.id)) return;
+      const status = getEventStatus(ev);
+      if (status === "finished") {
+        cleanedRef.current.add(ev.id);
+        updateDocument("liveEvents", ev.id, { isActive: false }).catch(() => {});
+      }
+    });
+  }, [liveEvents]);
 
   const activeEvents = liveEvents.filter(e => {
     if (!e.isActive) return false;
