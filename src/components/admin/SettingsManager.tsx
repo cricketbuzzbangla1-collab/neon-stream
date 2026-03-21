@@ -153,6 +153,19 @@ const SettingsManager = () => {
             Get your key from apifootball.com — auto-fetches live & upcoming matches
           </p>
         </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">API Calls Per Hour (Max)</label>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={form.footballApiCallsPerHour}
+            onChange={(e) => setForm({ ...form, footballApiCallsPerHour: Math.max(1, Math.min(10, parseInt(e.target.value) || 3)) })}
+            className={inputCls}
+          />
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            প্রতি ঘণ্টায় সর্বোচ্চ কতবার API call হবে (ডিফল্ট: 3, সর্বোচ্চ: 10)
+          </p>
       </div>
 
       <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
