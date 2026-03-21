@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
 import { useLiveEvents, useCountries, addDocument, updateDocument, deleteDocument, LiveEvent } from "@/hooks/useFirestore";
-import { useFootballMatches, FootballMatch } from "@/hooks/useFootballAPI";
-import { Plus, Trash2, Edit, Save, X, Search, ChevronLeft, ChevronRight, Zap, Link as LinkIcon } from "lucide-react";
+import { useFootballMatches, FootballMatch, ALLOWED_LEAGUES } from "@/hooks/useFootballAPI";
+import { Plus, Trash2, Edit, Save, X, Search, ChevronLeft, ChevronRight, Zap, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { doc, updateDoc as fbUpdateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const empty: Omit<LiveEvent, "id"> = {
   title: "", teamA: "", teamALogo: "", teamB: "", teamBLogo: "",
@@ -22,7 +24,7 @@ const DURATION_PRESETS = [
 const LiveEventManager = () => {
   const { data: events } = useLiveEvents();
   const { data: countries } = useCountries();
-  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled } = useFootballMatches();
+  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled, disabledLeagues } = useFootballMatches();
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -30,7 +32,32 @@ const LiveEventManager = () => {
   const [page, setPage] = useState(1);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [streamInputs, setStreamInputs] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<"manual" | "api">("api");
+  const [activeTab, setActiveTab] = useState<"manual" | "api" | "leagues">("api");
+  const [hiddenMatches, setHiddenMatches] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("hidden_matches") || "[]")); } catch { return new Set(); }
+  });
+
+  const toggleLeague = async (leagueId: string) => {
+    const newDisabled = disabledLeagues.includes(leagueId)
+      ? disabledLeagues.filter(id => id !== leagueId)
+      : [...disabledLeagues, leagueId];
+    try {
+      await fbUpdateDoc(doc(db, "appSettings", "main"), { disabledLeagues: newDisabled });
+      toast.success(newDisabled.includes(leagueId) ? "League hidden" : "League enabled");
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
+  const toggleMatchVisibility = (matchId: string) => {
+    setHiddenMatches(prev => {
+      const next = new Set(prev);
+      if (next.has(matchId)) next.delete(matchId);
+      else next.add(matchId);
+      localStorage.setItem("hidden_matches", JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   const getStatus = (ev: LiveEvent) => {
     const ms = ev.manualStatus;
@@ -200,20 +227,30 @@ const LiveEventManager = () => {
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-border pb-2">
+      <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab("api")}
-          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors ${
+          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors whitespace-nowrap ${
             activeTab === "api"
               ? "bg-primary/15 text-primary border-b-2 border-primary"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          ⚽ API Matches ({activeApiMatches.length})
+          ⚽ API Matches ({activeApiMatches.filter(m => !hiddenMatches.has(m.id)).length})
+        </button>
+        <button
+          onClick={() => setActiveTab("leagues")}
+          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors whitespace-nowrap ${
+            activeTab === "leagues"
+              ? "bg-primary/15 text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          🏆 Leagues ({Object.keys(ALLOWED_LEAGUES).length - disabledLeagues.length}/{Object.keys(ALLOWED_LEAGUES).length})
         </button>
         <button
           onClick={() => setActiveTab("manual")}
-          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors ${
+          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors whitespace-nowrap ${
             activeTab === "manual"
               ? "bg-primary/15 text-primary border-b-2 border-primary"
               : "text-muted-foreground hover:text-foreground"
@@ -222,6 +259,40 @@ const LiveEventManager = () => {
           📋 Live Events ({events.length})
         </button>
       </div>
+
+      {/* ===== LEAGUES TAB ===== */}
+      {activeTab === "leagues" && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3">
+            <Zap className="w-4 h-4 text-primary shrink-0" />
+            <span>লীগ ON/OFF করুন। বন্ধ করা লীগের ম্যাচ Homepage-এ দেখাবে না।</span>
+          </div>
+          <div className="space-y-2">
+            {Object.entries(ALLOWED_LEAGUES).map(([id, info]) => {
+              const isEnabled = !disabledLeagues.includes(id);
+              return (
+                <div key={id} className={`glass-card p-3 flex items-center justify-between gap-3 ${isEnabled ? "ring-1 ring-primary/20" : "opacity-60"}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground">{info.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{info.country} • ID: {id}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleLeague(id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      isEnabled
+                        ? "bg-primary/15 text-primary hover:bg-primary/25"
+                        : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                    }`}
+                  >
+                    {isEnabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    {isEnabled ? "ON" : "OFF"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ===== API MATCHES TAB ===== */}
       {activeTab === "api" && (
@@ -241,7 +312,7 @@ const LiveEventManager = () => {
             <p className="text-sm text-muted-foreground text-center py-8">No upcoming/live matches from API right now.</p>
           ) : (
             <div className="space-y-2">
-              {activeApiMatches.map(match => {
+              {activeApiMatches.filter(m => !hiddenMatches.has(m.id)).map(match => {
                 const imported = isAlreadyImported(match);
                 const existingEvent = imported ? findMatchingEvent(match) : null;
                 const hasStream = existingEvent?.streamUrl ? true : false;
@@ -256,6 +327,9 @@ const LiveEventManager = () => {
                         {match.isLive && <span className="text-[9px] text-destructive font-bold animate-pulse">🔴 LIVE {match.matchStatus}'</span>}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => toggleMatchVisibility(match.id)} className="p-1 rounded hover:bg-secondary text-muted-foreground" title="Hide match">
+                          <EyeOff className="w-3 h-3" />
+                        </button>
                         {imported && (
                           <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-bold">
                             {hasStream ? "✅ Ready" : "⚠️ No Stream"}

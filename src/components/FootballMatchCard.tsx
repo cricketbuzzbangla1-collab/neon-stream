@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { FootballMatch } from "@/hooks/useFootballAPI";
+import { FootballMatch, getMinutesUntilStart } from "@/hooks/useFootballAPI";
 import { LiveEvent, addDocument } from "@/hooks/useFirestore";
-import { Flame, Play, Clock, Plus } from "lucide-react";
+import { Flame, Play, Clock, Plus, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -33,23 +33,35 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
       && evA.length > 2 && evB.length > 2;
   });
 
-  // Countdown for upcoming matches
+  // Countdown logic using startTimestamp
   const getCountdown = () => {
     if (isLive || hasScore) return null;
-    // Parse match date and time
-    const [year, month, day] = match.matchDate.split("-").map(Number);
-    const [hour, minute] = match.matchTime.split(":").map(Number);
-    const matchTs = new Date(year, month - 1, day, hour, minute).getTime();
-    const diff = matchTs - now;
+    const diff = match.startTimestamp - now;
     if (diff <= 0) return null;
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
-    if (h > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   const countdown = getCountdown();
+  const minutesUntil = getMinutesUntilStart(match.startTimestamp);
+  const isStartingSoon = !isLive && minutesUntil > 0 && minutesUntil <= 30;
+  const isKickoffImminent = !isLive && minutesUntil > 0 && minutesUntil <= 10;
+
+  // Dynamic countdown color
+  const getCountdownColor = () => {
+    if (minutesUntil <= 10) return "text-destructive";
+    if (minutesUntil <= 30) return "text-yellow-500";
+    return "text-primary";
+  };
+
+  const getCountdownBg = () => {
+    if (minutesUntil <= 10) return "bg-destructive/15";
+    if (minutesUntil <= 30) return "bg-yellow-500/15";
+    return "bg-primary/10";
+  };
 
   const handleClick = () => {
     if (matchingEvent) {
@@ -57,16 +69,13 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
     }
   };
 
-  // Auto-import match as LiveEvent
   const handleImport = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (importing) return;
     setImporting(true);
     try {
-      const [year, month, day] = match.matchDate.split("-").map(Number);
-      const [hour, minute] = match.matchTime.split(":").map(Number);
-      const startTime = new Date(year, month - 1, day, hour, minute).getTime();
-      const endTime = startTime + 2 * 3600000; // 2 hours default
+      const startTime = match.startTimestamp;
+      const endTime = startTime + 2 * 3600000;
 
       await addDocument("liveEvents", {
         title: `${match.homeTeam} vs ${match.awayTeam}`,
@@ -103,6 +112,10 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
     "Ligue 1": "from-green-600/20 to-green-900/10",
     "UEFA Champions League": "from-blue-500/20 to-indigo-900/10",
     "UEFA Europa League": "from-orange-500/20 to-amber-900/10",
+    "UEFA Europa Conference League": "from-emerald-500/20 to-emerald-900/10",
+    "UEFA Nations League": "from-sky-500/20 to-sky-900/10",
+    "Saudi Pro League": "from-green-500/20 to-green-900/10",
+    "Major League Soccer": "from-blue-400/20 to-blue-900/10",
   };
 
   const gradientClass = leagueColors[match.league] || "from-primary/10 to-card";
@@ -113,8 +126,12 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
       className={`relative w-full rounded-2xl overflow-hidden transition-all duration-300 ${
         matchingEvent ? "cursor-pointer active:scale-[0.98]" : ""
       } ${
-        isLive
+        isKickoffImminent
+          ? "ring-2 ring-destructive/60 shadow-lg shadow-destructive/20 animate-pulse"
+          : isLive
           ? "ring-1 ring-destructive/40 shadow-lg shadow-destructive/10"
+          : isStartingSoon
+          ? "ring-1 ring-yellow-500/40 shadow-md shadow-yellow-500/10"
           : "ring-1 ring-border/20 shadow-sm"
       }`}
     >
@@ -124,10 +141,12 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
       {isLive && (
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
       )}
+      {isKickoffImminent && !isLive && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse" />
+      )}
 
       {/* Top-right badges */}
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-        {/* Admin import button */}
         {isAdmin && !matchingEvent && (
           <button
             onClick={handleImport}
@@ -140,6 +159,16 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
         {matchingEvent && (
           <div className="bg-primary text-primary-foreground px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 shadow-lg shadow-primary/20">
             <Play className="w-2.5 h-2.5 fill-current" /> Watch
+          </div>
+        )}
+        {isKickoffImminent && !isLive && (
+          <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 animate-pulse">
+            <AlertTriangle className="w-2.5 h-2.5" /> Kickoff!
+          </div>
+        )}
+        {isStartingSoon && !isKickoffImminent && !isLive && (
+          <div className="bg-yellow-500 text-black px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
+            🔥 Soon
           </div>
         )}
         {isLive && !matchingEvent && (
@@ -193,9 +222,9 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
             )}
             {/* Countdown */}
             {countdown && (
-              <div className="mt-1 flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-full">
-                <Clock className="w-2.5 h-2.5 text-primary" />
-                <span className="text-[9px] font-mono font-bold text-primary tabular-nums">{countdown}</span>
+              <div className={`mt-1 flex items-center gap-1 ${getCountdownBg()} px-2 py-0.5 rounded-full`}>
+                <Clock className={`w-2.5 h-2.5 ${getCountdownColor()}`} />
+                <span className={`text-[9px] font-mono font-bold tabular-nums ${getCountdownColor()}`}>{countdown}</span>
               </div>
             )}
           </div>

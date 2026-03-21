@@ -20,18 +20,36 @@ export interface FootballMatch {
   country: string;
   stadium: string;
   round: string;
+  startTimestamp: number; // parsed start_time for sorting/countdown
 }
 
 const DEFAULT_API_KEY = "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7";
 const API_BASE = "https://apiv3.apifootball.com/";
 
-const MAJOR_LEAGUE_IDS = new Set([
-  "152", "175", "207", "302", "168", "3", "4", "683", "346", "727", "10",
-]);
+// Allowed leagues with IDs and names
+export const ALLOWED_LEAGUES: Record<string, { name: string; country: string }> = {
+  "152": { name: "Premier League", country: "England" },
+  "302": { name: "La Liga", country: "Spain" },
+  "207": { name: "Serie A", country: "Italy" },
+  "175": { name: "Bundesliga", country: "Germany" },
+  "168": { name: "Ligue 1", country: "France" },
+  "278": { name: "Saudi Pro League", country: "Saudi Arabia" },
+  "332": { name: "Major League Soccer", country: "USA" },
+  "3":   { name: "UEFA Champions League", country: "Europe" },
+  "4":   { name: "UEFA Europa League", country: "Europe" },
+  "683": { name: "UEFA Europa Conference League", country: "Europe" },
+  "10":  { name: "UEFA Nations League", country: "Europe" },
+};
+
+const ALL_LEAGUE_IDS = Object.keys(ALLOWED_LEAGUES);
 
 // --- Rate Limiting (localStorage) ---
 const MAX_CALLS_PER_DAY = 48;
 const RATE_KEY = "football_api_rate";
+
+function getToday(): string {
+  return new Date().toISOString().split("T")[0];
+}
 
 function getRateInfo(): { count: number; date: string } {
   try {
@@ -47,8 +65,7 @@ function getRateInfo(): { count: number; date: string } {
 function incrementRate(): boolean {
   const info = getRateInfo();
   if (info.count >= MAX_CALLS_PER_DAY) return false;
-  const updated = { count: info.count + 1, date: getToday() };
-  localStorage.setItem(RATE_KEY, JSON.stringify(updated));
+  localStorage.setItem(RATE_KEY, JSON.stringify({ count: info.count + 1, date: getToday() }));
   return true;
 }
 
@@ -61,13 +78,20 @@ interface MatchCache {
 
 let matchCache: MatchCache | null = null;
 
-// Dynamic TTL: shorter when live matches exist
 function getCacheTTL(): number {
-  if (matchCache?.hasLive) return 10 * 60 * 1000; // 10 min for live
-  return 30 * 60 * 1000; // 30 min no live
+  if (matchCache?.hasLive) return 10 * 60 * 1000;
+  return 30 * 60 * 1000;
+}
+
+function parseMatchTimestamp(date: string, time: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  return new Date(year, month - 1, day, hour, minute).getTime();
 }
 
 function parseMatch(m: any): FootballMatch {
+  const matchDate = m.match_date || "";
+  const matchTime = m.match_time || "";
   return {
     id: m.match_id,
     homeTeam: m.match_hometeam_name || "",
@@ -76,8 +100,8 @@ function parseMatch(m: any): FootballMatch {
     awayLogo: m.team_away_badge || "",
     homeScore: m.match_hometeam_score || "",
     awayScore: m.match_awayteam_score || "",
-    matchTime: m.match_time || "",
-    matchDate: m.match_date || "",
+    matchTime,
+    matchDate,
     matchStatus: m.match_status || "",
     isLive: m.match_live === "1",
     league: m.league_name || "",
@@ -86,11 +110,8 @@ function parseMatch(m: any): FootballMatch {
     country: m.country_name || "",
     stadium: m.match_stadium || "",
     round: m.match_round || "",
+    startTimestamp: parseMatchTimestamp(matchDate, matchTime),
   };
-}
-
-function getToday(): string {
-  return new Date().toISOString().split("T")[0];
 }
 
 function getTomorrow(): string {
@@ -99,11 +120,17 @@ function getTomorrow(): string {
   return d.toISOString().split("T")[0];
 }
 
+// Helper to get minutes until match starts
+export function getMinutesUntilStart(startTs: number): number {
+  return (startTs - Date.now()) / 60000;
+}
+
 export function useFootballMatches() {
   const [matches, setMatches] = useState<FootballMatch[]>(matchCache?.data || []);
   const [loading, setLoading] = useState(!matchCache);
   const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
   const [enabled, setEnabled] = useState(true);
+  const [disabledLeagues, setDisabledLeagues] = useState<string[]>([]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "appSettings", "main"), (snap) => {
@@ -112,6 +139,8 @@ export function useFootballMatches() {
         if (data.footballApiKey) setApiKey(data.footballApiKey);
         if (data.footballApiEnabled === false) setEnabled(false);
         else setEnabled(true);
+        if (Array.isArray(data.disabledLeagues)) setDisabledLeagues(data.disabledLeagues);
+        else setDisabledLeagues([]);
       }
     });
     return unsub;
@@ -123,25 +152,20 @@ export function useFootballMatches() {
       return;
     }
 
-    // Check cache freshness
     if (matchCache && Date.now() - matchCache.ts < getCacheTTL()) {
       setMatches(matchCache.data);
       setLoading(false);
       return;
     }
 
-    // Check daily rate limit
     const rateInfo = getRateInfo();
     if (rateInfo.count >= MAX_CALLS_PER_DAY) {
       console.warn(`⚠️ Football API: Daily limit reached (${rateInfo.count}/${MAX_CALLS_PER_DAY})`);
-      if (matchCache) {
-        setMatches(matchCache.data);
-      }
+      if (matchCache) setMatches(matchCache.data);
       setLoading(false);
       return;
     }
 
-    // Increment rate counter
     if (!incrementRate()) {
       if (matchCache) setMatches(matchCache.data);
       setLoading(false);
@@ -151,7 +175,7 @@ export function useFootballMatches() {
     try {
       const today = getToday();
       const tomorrow = getTomorrow();
-      const leagueIds = [...MAJOR_LEAGUE_IDS].join(",");
+      const leagueIds = ALL_LEAGUE_IDS.join(",");
 
       const url = `${API_BASE}?action=get_events&from=${today}&to=${tomorrow}&league_id=${leagueIds}&APIkey=${apiKey}`;
       const res = await fetch(url);
@@ -162,17 +186,18 @@ export function useFootballMatches() {
           .map(parseMatch)
           .filter(m => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
 
+        // Sort: live first, then by start_time ascending (soonest first)
         parsed.sort((a, b) => {
           if (a.isLive && !b.isLive) return -1;
           if (!a.isLive && b.isLive) return 1;
-          return `${a.matchDate} ${a.matchTime}`.localeCompare(`${b.matchDate} ${b.matchTime}`);
+          return a.startTimestamp - b.startTimestamp;
         });
 
         const hasLive = parsed.some(m => m.isLive);
         matchCache = { data: parsed, ts: Date.now(), hasLive };
         setMatches(parsed);
 
-        console.log(`⚽ Football API: Fetched ${parsed.length} matches (${getRateInfo().count}/${MAX_CALLS_PER_DAY} calls today, ${hasLive ? "LIVE detected → 10min refresh" : "no live → 30min refresh"})`);
+        console.log(`⚽ Football API: Fetched ${parsed.length} matches (${getRateInfo().count}/${MAX_CALLS_PER_DAY} calls today)`);
       } else {
         matchCache = { data: [], ts: Date.now(), hasLive: false };
         setMatches([]);
@@ -187,13 +212,17 @@ export function useFootballMatches() {
 
   useEffect(() => {
     fetchMatches();
-    // Check every 5 min; actual API calls governed by cache TTL + rate limit
     const interval = setInterval(fetchMatches, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchMatches]);
 
-  const liveMatches = matches.filter(m => m.isLive);
-  const upcomingMatches = matches.filter(m => !m.isLive && !m.matchStatus);
+  // Filter out admin-disabled leagues
+  const filteredMatches = matches.filter(m => !disabledLeagues.includes(m.leagueId));
 
-  return { matches, liveMatches, upcomingMatches, loading, enabled };
+  const liveMatches = filteredMatches.filter(m => m.isLive);
+  const upcomingMatches = filteredMatches
+    .filter(m => !m.isLive && !m.matchStatus)
+    .sort((a, b) => a.startTimestamp - b.startTimestamp);
+
+  return { matches: filteredMatches, liveMatches, upcomingMatches, loading, enabled, disabledLeagues };
 }
