@@ -190,75 +190,31 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   const today = getToday();
   const tomorrow = getTomorrow();
   const targetUrl = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
-  
-  // Try multiple CORS proxy approaches
-  const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl + `&__token=${apiKey}`)}`,
-    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-  ];
 
-  let lastError: any = null;
-  
-  for (const proxyUrl of proxies) {
-    try {
-      const headers: Record<string, string> = {};
-      // allorigins passes raw URL, corsproxy passes headers
-      if (!proxyUrl.includes("allorigins")) {
-        headers["X-Auth-Token"] = apiKey;
-      }
-      
-      const res = await fetch(proxyUrl, { headers });
-      
-      if (!res.ok) {
-        lastError = `Status ${res.status}`;
-        continue;
-      }
-      
-      const text = await res.text();
-      // allorigins won't pass the auth header, so it will fail — skip to direct approach
-      if (text.includes("error") && text.includes("403")) {
-        lastError = "Auth failed via proxy";
-        continue;
-      }
-      
-      const json = JSON.parse(text);
-      if (json.matches && Array.isArray(json.matches)) {
-        console.log(`✅ football-data.org: Success via proxy`);
-        return filterFootballdataMatches(json.matches);
-      }
-      lastError = "Invalid response format";
-    } catch (err) {
-      lastError = err;
-    }
-  }
-
-  // Direct fetch as final attempt (works on deployed sites, may fail in preview due to CORS)
   try {
     const res = await fetch(targetUrl, {
       headers: { "X-Auth-Token": apiKey },
+      mode: "cors",
     });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.matches && Array.isArray(json.matches)) {
-        console.log(`✅ football-data.org: Success via direct fetch`);
-        return filterFootballdataMatches(json.matches);
-      }
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      console.error(`football-data.org error ${res.status}: ${errorText}`);
+      return [];
     }
+
+    const json = await res.json();
+    if (!json.matches || !Array.isArray(json.matches)) return [];
+
+    const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
+    return json.matches
+      .filter((m: any) => allowedCodes.includes(m.competition?.code))
+      .map(parseFootballdataMatch)
+      .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
   } catch (err) {
-    console.warn("football-data.org direct fetch failed (CORS expected in preview):", err);
+    console.error("football-data.org fetch error:", err);
+    return [];
   }
-
-  console.error(`football-data.org: All fetch attempts failed. Last error:`, lastError);
-  return [];
-}
-
-// Helper to filter football-data.org raw matches
-function filterFootballdataMatches(rawMatches: any[]): FootballMatch[] {
-  const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
-  return rawMatches
-    .filter((m: any) => allowedCodes.includes(m.competition?.code))
-    .map(parseFootballdataMatch)
-    .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
 }
 
 // ===== Hook =====
