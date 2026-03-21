@@ -141,7 +141,7 @@ const Index = () => {
               </h2>
               <div className="flex flex-col gap-2">
                 {displayedUpcoming.map(m => (
-                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
+                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
                 ))}
               </div>
               {hasMoreUpcoming && !showAllUpcoming && (
