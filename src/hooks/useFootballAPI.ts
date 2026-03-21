@@ -160,8 +160,12 @@ function parseApifootballMatch(m: any): FootballMatch {
 function calcLiveMinute(startTimestamp: number): string {
   const elapsed = Math.floor((Date.now() - startTimestamp) / 60000);
   if (elapsed <= 0) return "1";
-  if (elapsed > 120) return "90+";
-  return String(elapsed);
+  if (elapsed <= 45) return String(elapsed);
+  if (elapsed <= 60) return "HT";
+  // After halftime break (~15 min), subtract break time
+  const matchMin = elapsed - 15;
+  if (matchMin <= 90) return String(matchMin);
+  return "90+";
 }
 
 function mapFDStatus(status: string, startTimestamp: number, minute?: number): { displayStatus: string; isLive: boolean } {
