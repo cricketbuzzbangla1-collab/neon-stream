@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Tv, MessageCircle, Palette, User, LogOut, Send, Menu, Film } from "lucide-react";
+import { Home, Tv, MessageCircle, Palette, User, LogOut, Send, Menu } from "lucide-react";
 import { useTheme, ThemeType } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/hooks/useFirestore";
@@ -25,7 +25,6 @@ const Navbar = () => {
   const navItems = [
     { to: "/", icon: Home, label: "Home" },
     { to: "/channels", icon: Tv, label: "Channels" },
-    { to: "/movies", icon: Film, label: "Movies" },
     { to: "/chat", icon: MessageCircle, label: "Community" },
   ];
 
