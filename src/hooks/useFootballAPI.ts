@@ -131,6 +131,7 @@ export function useFootballMatches() {
   const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
   const [enabled, setEnabled] = useState(true);
   const [disabledLeagues, setDisabledLeagues] = useState<string[]>([]);
+  const [maxCallsPerHour, setMaxCallsPerHour] = useState(3);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "appSettings", "main"), (snap) => {
@@ -141,6 +142,7 @@ export function useFootballMatches() {
         else setEnabled(true);
         if (Array.isArray(data.disabledLeagues)) setDisabledLeagues(data.disabledLeagues);
         else setDisabledLeagues([]);
+        if (typeof data.footballApiCallsPerHour === "number") setMaxCallsPerHour(data.footballApiCallsPerHour);
       }
     });
     return unsub;
@@ -159,14 +161,14 @@ export function useFootballMatches() {
     }
 
     const rateInfo = getRateInfo();
-    if (rateInfo.count >= MAX_CALLS_PER_DAY) {
-      console.warn(`⚠️ Football API: Daily limit reached (${rateInfo.count}/${MAX_CALLS_PER_DAY})`);
+    if (rateInfo.count >= maxCallsPerHour) {
+      console.warn(`⚠️ Football API: Hourly limit reached (${rateInfo.count}/${maxCallsPerHour})`);
       if (matchCache) setMatches(matchCache.data);
       setLoading(false);
       return;
     }
 
-    if (!incrementRate()) {
+    if (!incrementRate(maxCallsPerHour)) {
       if (matchCache) setMatches(matchCache.data);
       setLoading(false);
       return;
@@ -186,7 +188,6 @@ export function useFootballMatches() {
           .map(parseMatch)
           .filter(m => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
 
-        // Sort: live first, then by start_time ascending (soonest first)
         parsed.sort((a, b) => {
           if (a.isLive && !b.isLive) return -1;
           if (!a.isLive && b.isLive) return 1;
@@ -197,7 +198,7 @@ export function useFootballMatches() {
         matchCache = { data: parsed, ts: Date.now(), hasLive };
         setMatches(parsed);
 
-        console.log(`⚽ Football API: Fetched ${parsed.length} matches (${getRateInfo().count}/${MAX_CALLS_PER_DAY} calls today)`);
+        console.log(`⚽ Football API: Fetched ${parsed.length} matches (${getRateInfo().count}/${maxCallsPerHour} calls this hour)`);
       } else {
         matchCache = { data: [], ts: Date.now(), hasLive: false };
         setMatches([]);
@@ -208,15 +209,15 @@ export function useFootballMatches() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, enabled]);
+  }, [apiKey, enabled, maxCallsPerHour]);
 
   useEffect(() => {
     fetchMatches();
-    const interval = setInterval(fetchMatches, 5 * 60 * 1000);
+    const intervalMs = Math.max(5 * 60 * 1000, Math.floor(60 * 60 * 1000 / Math.max(maxCallsPerHour, 1)));
+    const interval = setInterval(fetchMatches, intervalMs);
     return () => clearInterval(interval);
-  }, [fetchMatches]);
+  }, [fetchMatches, maxCallsPerHour]);
 
-  // Filter out admin-disabled leagues
   const filteredMatches = matches.filter(m => !disabledLeagues.includes(m.leagueId));
 
   const liveMatches = filteredMatches.filter(m => m.isLive);
