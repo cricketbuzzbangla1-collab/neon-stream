@@ -17,6 +17,7 @@ const SettingsManager = () => {
     adsEnabled: false,
     footballApiKey: "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
     footballApiEnabled: true,
+    footballApiCallsPerHour: 3,
   });
   const [loading, setLoading] = useState(true);
 
