@@ -24,7 +24,7 @@ const DURATION_PRESETS = [
 const LiveEventManager = () => {
   const { data: events } = useLiveEvents();
   const { data: countries } = useCountries();
-  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled } = useFootballMatches();
+  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled, disabledLeagues } = useFootballMatches();
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -32,7 +32,32 @@ const LiveEventManager = () => {
   const [page, setPage] = useState(1);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [streamInputs, setStreamInputs] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<"manual" | "api">("api");
+  const [activeTab, setActiveTab] = useState<"manual" | "api" | "leagues">("api");
+  const [hiddenMatches, setHiddenMatches] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("hidden_matches") || "[]")); } catch { return new Set(); }
+  });
+
+  const toggleLeague = async (leagueId: string) => {
+    const newDisabled = disabledLeagues.includes(leagueId)
+      ? disabledLeagues.filter(id => id !== leagueId)
+      : [...disabledLeagues, leagueId];
+    try {
+      await fbUpdateDoc(doc(db, "appSettings", "main"), { disabledLeagues: newDisabled });
+      toast.success(newDisabled.includes(leagueId) ? "League hidden" : "League enabled");
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
+  const toggleMatchVisibility = (matchId: string) => {
+    setHiddenMatches(prev => {
+      const next = new Set(prev);
+      if (next.has(matchId)) next.delete(matchId);
+      else next.add(matchId);
+      localStorage.setItem("hidden_matches", JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   const getStatus = (ev: LiveEvent) => {
     const ms = ev.manualStatus;
