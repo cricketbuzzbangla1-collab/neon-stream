@@ -331,7 +331,8 @@ export function useFootballMatches() {
   }, [apiKey, footballdataKey, enabled, maxCallsPerHour, apiProvider]);
 
   useEffect(() => {
-    matchCache = null; // reset cache on provider change
+    matchCache = null;
+    resetRateLimit(); // reset rate limit when provider changes
     fetchMatches();
     const intervalMs = Math.max(5 * 60 * 1000, Math.floor(60 * 60 * 1000 / Math.max(maxCallsPerHour, 1)));
     const interval = setInterval(fetchMatches, intervalMs);
