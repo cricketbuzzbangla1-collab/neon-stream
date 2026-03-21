@@ -5,7 +5,7 @@ import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
 import NoticeBar from "@/components/NoticeBar";
 import EmptyState from "@/components/EmptyState";
-import { Tv, Trophy } from "lucide-react";
+import { Trophy, CalendarClock } from "lucide-react";
 
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
@@ -46,7 +46,7 @@ const Index = () => {
         <EmptyState message="No live events right now. Check back soon!" />
       ) : (
         <div className="space-y-6 py-6">
-          {/* Manual Live Events */}
+          {/* 🔴 Live Now — Manual Events (Big Matches with streams) */}
           {liveNowEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
@@ -61,7 +61,7 @@ const Index = () => {
             </section>
           )}
 
-          {/* Manual Upcoming Events */}
+          {/* ⏳ Upcoming — Manual Events */}
           {upcomingEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
@@ -75,32 +75,32 @@ const Index = () => {
             </section>
           )}
 
-          {/* Football API - Live */}
+          {/* ⚽ Football API — Live Scores (clickable if matching live event exists) */}
           {footballEnabled && liveMatches.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-destructive" />
                 <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                Live Football
+                Live Scores
               </h2>
               <div className="flex flex-col gap-2">
                 {liveMatches.slice(0, 20).map(m => (
-                  <FootballMatchCard key={m.id} match={m} />
+                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
                 ))}
               </div>
             </section>
           )}
 
-          {/* Football API - Upcoming */}
+          {/* ⚽ Football API — Upcoming Matches */}
           {footballEnabled && upcomingMatches.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
-                <Tv className="w-4 h-4 text-primary" />
-                Today's Matches
+                <CalendarClock className="w-4 h-4 text-primary" />
+                Upcoming Matches
               </h2>
               <div className="flex flex-col gap-2">
                 {upcomingMatches.slice(0, 30).map(m => (
-                  <FootballMatchCard key={m.id} match={m} />
+                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
                 ))}
               </div>
             </section>
