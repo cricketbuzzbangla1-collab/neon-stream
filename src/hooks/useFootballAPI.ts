@@ -198,55 +198,105 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   try {
     let json: any = null;
 
-    // Try direct CORS first
+    // Method 1: Direct fetch with CORS (football-data.org supports CORS)
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       const res = await fetch(targetUrl, {
         headers: { "X-Auth-Token": apiKey },
-        mode: "cors",
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (res.ok) {
         json = await res.json();
+        console.log("✅ football-data.org: Direct fetch success");
       } else {
-        console.warn(`football-data.org direct: ${res.status}`);
+        const errText = await res.text().catch(() => "");
+        console.warn(`football-data.org direct error ${res.status}: ${errText}`);
       }
-    } catch (e) {
-      console.warn("football-data.org direct CORS blocked, trying proxy...");
+    } catch (e: any) {
+      console.warn("football-data.org direct failed:", e?.message || e);
     }
 
-    // Fallback: allorigins proxy
+    // Method 2: Use thingproxy (forwards headers properly)
     if (!json) {
       try {
-        const proxyRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, {
+        console.log("Trying thingproxy for football-data.org...");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const proxyRes = await fetch(`https://thingproxy.freeboard.io/fetch/${targetUrl}`, {
           headers: { "X-Auth-Token": apiKey },
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         if (proxyRes.ok) {
           json = await proxyRes.json();
+          console.log("✅ football-data.org: thingproxy success");
         }
-      } catch (e) {
-        console.warn("allorigins proxy failed, trying corsproxy.io...");
+      } catch (e: any) {
+        console.warn("thingproxy failed:", e?.message || e);
       }
     }
 
-    // Fallback 2: corsproxy.io
+    // Method 3: Use corsproxy.io (forwards most headers)
     if (!json) {
-      const proxyRes2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
-        headers: { "X-Auth-Token": apiKey },
-      });
-      if (proxyRes2.ok) {
-        json = await proxyRes2.json();
-      } else {
-        console.error(`football-data.org all proxies failed: ${proxyRes2.status}`);
-        return [];
+      try {
+        console.log("Trying corsproxy.io for football-data.org...");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const proxyRes = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
+          headers: { "X-Auth-Token": apiKey },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (proxyRes.ok) {
+          json = await proxyRes.json();
+          console.log("✅ football-data.org: corsproxy success");
+        }
+      } catch (e: any) {
+        console.warn("corsproxy.io failed:", e?.message || e);
       }
     }
 
-    if (!json?.matches || !Array.isArray(json.matches)) return [];
+    // Method 4: Use allorigins with JSON wrapper (no custom headers but public endpoints)
+    if (!json) {
+      try {
+        console.log("Trying allorigins for football-data.org...");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl + "&_token=" + apiKey)}`;
+        const proxyRes = await fetch(allOriginsUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (proxyRes.ok) {
+          const wrapper = await proxyRes.json();
+          if (wrapper.contents) {
+            json = JSON.parse(wrapper.contents);
+            console.log("✅ football-data.org: allorigins success");
+          }
+        }
+      } catch (e: any) {
+        console.warn("allorigins failed:", e?.message || e);
+      }
+    }
+
+    if (!json) {
+      console.error("❌ football-data.org: All methods failed. Check API key.");
+      return [];
+    }
+
+    if (!json?.matches || !Array.isArray(json.matches)) {
+      console.warn("football-data.org: No matches array in response", json);
+      return [];
+    }
 
     const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
-    return json.matches
+    const filtered = json.matches
       .filter((m: any) => allowedCodes.includes(m.competition?.code))
       .map(parseFootballdataMatch)
       .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
+    
+    console.log(`⚽ football-data.org: ${filtered.length} matches after filtering`);
+    return filtered;
   } catch (err) {
     console.error("football-data.org fetch error:", err);
     return [];
