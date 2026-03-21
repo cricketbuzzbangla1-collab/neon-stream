@@ -159,10 +159,10 @@ function calcLiveMinute(startTimestamp: number): string {
   return String(elapsed);
 }
 
-function mapFDStatus(status: string, startTimestamp: number): { displayStatus: string; isLive: boolean } {
+function mapFDStatus(status: string, startTimestamp: number, minute?: number): { displayStatus: string; isLive: boolean } {
   switch (status) {
     case "IN_PLAY":
-      return { displayStatus: calcLiveMinute(startTimestamp), isLive: true };
+      return { displayStatus: minute ? String(minute) : calcLiveMinute(startTimestamp), isLive: true };
     case "HALFTIME":
     case "PAUSED":
       return { displayStatus: "HT", isLive: true };
