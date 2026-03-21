@@ -22,11 +22,10 @@ const Index = () => {
     return getEventStatus(e) !== "finished";
   });
 
-  // Live manual events — sorted by least remaining time (startTime ascending)
+  // Live manual events — stream links first, then by startTime
   const liveNowEvents = activeEvents
     .filter(e => getEventStatus(e) === "live")
     .sort((a, b) => {
-      // Stream links first, then by startTime (least remaining)
       const aHas = a.streamUrl ? 1 : 0;
       const bHas = b.streamUrl ? 1 : 0;
       if (bHas !== aHas) return bHas - aHas;
@@ -38,19 +37,16 @@ const Index = () => {
     .filter(e => getEventStatus(e) === "upcoming")
     .sort((a, b) => a.startTime - b.startTime);
 
-  // Combine all API matches: live first (by least remaining), then upcoming (soonest first)
-  const allApiMatches = footballEnabled
-    ? [...liveMatches, ...upcomingMatches].sort((a, b) => {
-        // Live always first
-        if (a.isLive && !b.isLive) return -1;
-        if (!a.isLive && b.isLive) return 1;
-        // Both same status: sort by startTimestamp ascending (least time remaining / soonest)
-        return a.startTimestamp - b.startTimestamp;
-      })
+  // API matches sorted by soonest
+  const sortedLiveMatches = footballEnabled
+    ? [...liveMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
+    : [];
+  const sortedUpcomingMatches = footballEnabled
+    ? [...upcomingMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
     : [];
 
   const hasManualEvents = liveNowEvents.length > 0 || upcomingEvents.length > 0;
-  const hasFootball = allApiMatches.length > 0;
+  const hasFootball = footballEnabled && (sortedLiveMatches.length > 0 || sortedUpcomingMatches.length > 0);
   const loading = eventsLoading || footballLoading;
   const hasAnything = hasManualEvents || hasFootball;
 
@@ -68,7 +64,7 @@ const Index = () => {
         <EmptyState message="No live events right now. Check back soon!" />
       ) : (
         <div className="space-y-6 py-6">
-          {/* 🔴 Live Now — Manual Events (Big Matches with streams) */}
+          {/* 🔴 Live Now — Manual Events */}
           {liveNowEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
@@ -83,7 +79,7 @@ const Index = () => {
             </section>
           )}
 
-          {/* ⏳ Upcoming — Manual Events with countdown */}
+          {/* ⏳ Upcoming — Manual Events */}
           {upcomingEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
@@ -97,18 +93,31 @@ const Index = () => {
             </section>
           )}
 
-          {/* ⚽ All Football Matches — Live first, then upcoming (all with countdown) */}
-          {hasFootball && (
+          {/* ⚽ Football API — Live Scores */}
+          {sortedLiveMatches.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-primary" />
-                {allApiMatches.some(m => m.isLive) && (
-                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                )}
-                Football Matches
+                <Trophy className="w-4 h-4 text-destructive" />
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Live Scores
               </h2>
               <div className="flex flex-col gap-2">
-                {allApiMatches.slice(0, 50).map(m => (
+                {sortedLiveMatches.slice(0, 20).map(m => (
+                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ⚽ Football API — Upcoming Matches */}
+          {sortedUpcomingMatches.length > 0 && (
+            <section className="container">
+              <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 text-primary" />
+                Upcoming Matches
+              </h2>
+              <div className="flex flex-col gap-2">
+                {sortedUpcomingMatches.slice(0, 30).map(m => (
                   <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
                 ))}
               </div>

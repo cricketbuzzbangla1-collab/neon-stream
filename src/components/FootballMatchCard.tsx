@@ -35,7 +35,7 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
 
   // Countdown logic using startTimestamp
   const getCountdown = () => {
-    if (isLive || hasScore) return null;
+    if (isLive) return null;
     const diff = match.startTimestamp - now;
     if (diff <= 0) return null;
     const h = Math.floor(diff / 3600000);
