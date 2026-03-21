@@ -190,14 +190,6 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
           <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider truncate">
             {match.league}
           </span>
-          {isLive && liveMinute && (
-            <div className="ml-auto flex items-center gap-1.5 bg-destructive/15 border border-destructive/30 px-2.5 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
-              <span className="text-[11px] font-mono font-black tabular-nums text-destructive tracking-wide">
-                {liveMinute}'
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Teams */}
@@ -213,25 +205,42 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
             <span className="text-xs font-bold text-foreground truncate">{match.homeTeam}</span>
           </div>
 
-          {/* Score / VS / Countdown */}
-          <div className="flex flex-col items-center shrink-0 mx-3 min-w-[48px]">
-            {hasScore ? (
-              <div className={`px-3 py-1 rounded-lg ${isLive ? "bg-destructive/15" : "bg-secondary/60"}`}>
-                <span className={`text-base font-black tabular-nums tracking-wider ${isLive ? "text-destructive" : "text-foreground"}`}>
-                  {match.homeScore} — {match.awayScore}
-                </span>
-              </div>
+          {/* Center: Score + Live Minute / Match Time */}
+          <div className="flex flex-col items-center shrink-0 mx-3 min-w-[56px]">
+            {isLive ? (
+              <>
+                {/* Live minute badge */}
+                <div className="flex items-center gap-1 bg-destructive/20 border border-destructive/40 px-2 py-0.5 rounded-full mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                  <span className="text-[9px] font-mono font-black tabular-nums text-destructive">
+                    {liveMinute ? `${liveMinute}'` : "LIVE"}
+                  </span>
+                </div>
+                {/* Score */}
+                {hasScore && (
+                  <div className="bg-destructive/15 border border-destructive/30 px-3.5 py-1.5 rounded-xl">
+                    <span className="text-lg font-black tabular-nums tracking-widest text-destructive">
+                      {match.homeScore} - {match.awayScore}
+                    </span>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="px-3 py-1.5 rounded-lg bg-secondary/60">
-                <span className="text-[10px] font-black text-muted-foreground">{match.matchTime}</span>
-              </div>
-            )}
-            {/* Countdown */}
-            {countdown && (
-              <div className={`mt-1 flex items-center gap-1 ${getCountdownBg()} px-2 py-0.5 rounded-full`}>
-                <Clock className={`w-2.5 h-2.5 ${getCountdownColor()}`} />
-                <span className={`text-[9px] font-mono font-bold tabular-nums ${getCountdownColor()}`}>{countdown}</span>
-              </div>
+              <>
+                {/* Match kickoff time */}
+                <div className="bg-secondary/80 border border-border/40 px-3 py-1.5 rounded-xl">
+                  <span className="text-sm font-black tabular-nums text-foreground tracking-wide">
+                    {match.matchTime}
+                  </span>
+                </div>
+                {/* Countdown */}
+                {countdown && (
+                  <div className={`mt-1.5 flex items-center gap-1 ${getCountdownBg()} border ${minutesUntil <= 10 ? "border-destructive/30" : minutesUntil <= 30 ? "border-yellow-500/30" : "border-primary/20"} px-2 py-0.5 rounded-full`}>
+                    <Clock className={`w-2.5 h-2.5 ${getCountdownColor()}`} />
+                    <span className={`text-[9px] font-mono font-bold tabular-nums ${getCountdownColor()}`}>{countdown}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
