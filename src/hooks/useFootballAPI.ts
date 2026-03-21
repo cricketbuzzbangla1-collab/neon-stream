@@ -241,7 +241,7 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
       const json = await res.json();
       if (json.matches && Array.isArray(json.matches)) {
         console.log(`✅ football-data.org: Success via direct fetch`);
-        return json.matches;
+        return filterFootballdataMatches(json.matches);
       }
     }
   } catch (err) {
