@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { LiveEvent, useCountries } from "@/hooks/useFirestore";
 import { useNavigate } from "react-router-dom";
 import { Play, Clock, Zap } from "lucide-react";
@@ -12,16 +11,11 @@ export const getEventStatus = (event: LiveEvent): "live" | "upcoming" | "finishe
   return "finished";
 };
 
-const LiveEventCard = ({ event }: { event: LiveEvent }) => {
+const LiveEventCard = ({ event, now: externalNow }: { event: LiveEvent; now?: number }) => {
   const navigate = useNavigate();
   const { data: countries } = useCountries();
   const country = countries.find(c => c.id === event.countryId);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const now = externalNow ?? Date.now();
 
   const teamAName = typeof event.teamA === "object" ? (event.teamA as any)?.name || "" : String(event.teamA || "");
   const teamBName = typeof event.teamB === "object" ? (event.teamB as any)?.name || "" : String(event.teamB || "");

@@ -12,13 +12,13 @@ const INITIAL_UPCOMING_COUNT = 10;
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const { liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(Date.now());
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
   const cleanedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const t = setInterval(() => setTick(n => n + 1), 1000);
+    const t = setInterval(() => setTick(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -93,7 +93,7 @@ const Index = () => {
               </h2>
               <div className="flex flex-col gap-3">
                 {liveNowEvents.map(ev => (
-                  <LiveEventCard key={ev.id} event={ev} />
+                  <LiveEventCard key={ev.id} event={ev} now={tick} />
                 ))}
               </div>
             </section>
@@ -107,7 +107,7 @@ const Index = () => {
               </h2>
               <div className="flex flex-col gap-3">
                 {upcomingEvents.map(ev => (
-                  <LiveEventCard key={ev.id} event={ev} />
+                  <LiveEventCard key={ev.id} event={ev} now={tick} />
                 ))}
               </div>
             </section>
@@ -123,7 +123,7 @@ const Index = () => {
               </h2>
               <div className="flex flex-col gap-2">
                 {sortedLiveMatches.slice(0, 20).map(m => (
-                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
+                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
                 ))}
               </div>
             </section>
@@ -141,7 +141,7 @@ const Index = () => {
               </h2>
               <div className="flex flex-col gap-2">
                 {displayedUpcoming.map(m => (
-                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
+                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
                 ))}
               </div>
               {hasMoreUpcoming && !showAllUpcoming && (
