@@ -166,6 +166,7 @@ const SettingsManager = () => {
           <p className="text-[10px] text-muted-foreground/60 mt-1">
             প্রতি ঘণ্টায় সর্বোচ্চ কতবার API call হবে (ডিফল্ট: 3, সর্বোচ্চ: 10)
           </p>
+        </div>
       </div>
 
       <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
