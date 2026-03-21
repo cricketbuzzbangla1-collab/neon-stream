@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { useLiveEvents } from "@/hooks/useFirestore";
+import { useFootballMatches } from "@/hooks/useFootballAPI";
 import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
+import FootballMatchCard from "@/components/FootballMatchCard";
 import NoticeBar from "@/components/NoticeBar";
 import EmptyState from "@/components/EmptyState";
+import { Tv, Trophy } from "lucide-react";
 
 const Index = () => {
-  const { data: liveEvents, loading } = useLiveEvents();
+  const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
+  const { liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -23,7 +27,10 @@ const Index = () => {
     .filter(e => getEventStatus(e) === "upcoming")
     .sort((a, b) => a.startTime - b.startTime);
 
-  const hasEvents = liveNowEvents.length > 0 || upcomingEvents.length > 0;
+  const hasManualEvents = liveNowEvents.length > 0 || upcomingEvents.length > 0;
+  const hasFootball = footballEnabled && (liveMatches.length > 0 || upcomingMatches.length > 0);
+  const loading = eventsLoading || footballLoading;
+  const hasAnything = hasManualEvents || hasFootball;
 
   return (
     <div className="min-h-screen pb-20 pt-16">
@@ -35,10 +42,11 @@ const Index = () => {
             <div key={i} className="h-24 rounded-xl skeleton-shimmer" />
           ))}
         </div>
-      ) : !hasEvents ? (
+      ) : !hasAnything ? (
         <EmptyState message="No live events right now. Check back soon!" />
       ) : (
         <div className="space-y-6 py-6">
+          {/* Manual Live Events */}
           {liveNowEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
@@ -53,6 +61,7 @@ const Index = () => {
             </section>
           )}
 
+          {/* Manual Upcoming Events */}
           {upcomingEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
@@ -61,6 +70,37 @@ const Index = () => {
               <div className="flex flex-col gap-3">
                 {upcomingEvents.map(ev => (
                   <LiveEventCard key={ev.id} event={ev} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Football API - Live */}
+          {footballEnabled && liveMatches.length > 0 && (
+            <section className="container">
+              <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-destructive" />
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Live Football
+              </h2>
+              <div className="flex flex-col gap-2">
+                {liveMatches.slice(0, 20).map(m => (
+                  <FootballMatchCard key={m.id} match={m} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Football API - Upcoming */}
+          {footballEnabled && upcomingMatches.length > 0 && (
+            <section className="container">
+              <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                <Tv className="w-4 h-4 text-primary" />
+                Today's Matches
+              </h2>
+              <div className="flex flex-col gap-2">
+                {upcomingMatches.slice(0, 30).map(m => (
+                  <FootballMatchCard key={m.id} match={m} />
                 ))}
               </div>
             </section>
