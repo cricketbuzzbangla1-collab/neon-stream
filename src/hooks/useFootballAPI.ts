@@ -43,29 +43,29 @@ export const ALLOWED_LEAGUES: Record<string, { name: string; country: string }> 
 
 const ALL_LEAGUE_IDS = Object.keys(ALLOWED_LEAGUES);
 
-// --- Rate Limiting (localStorage) ---
-const MAX_CALLS_PER_DAY = 48;
-const RATE_KEY = "football_api_rate";
+// --- Rate Limiting (localStorage, per hour) ---
+const RATE_KEY = "football_api_rate_hourly";
 
-function getToday(): string {
-  return new Date().toISOString().split("T")[0];
+function getCurrentHour(): string {
+  const d = new Date();
+  return `${d.toISOString().split("T")[0]}_${d.getHours()}`;
 }
 
-function getRateInfo(): { count: number; date: string } {
+function getRateInfo(): { count: number; hour: string } {
   try {
     const raw = localStorage.getItem(RATE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.date === getToday()) return parsed;
+      if (parsed.hour === getCurrentHour()) return parsed;
     }
   } catch {}
-  return { count: 0, date: getToday() };
+  return { count: 0, hour: getCurrentHour() };
 }
 
-function incrementRate(): boolean {
+function incrementRate(maxPerHour: number): boolean {
   const info = getRateInfo();
-  if (info.count >= MAX_CALLS_PER_DAY) return false;
-  localStorage.setItem(RATE_KEY, JSON.stringify({ count: info.count + 1, date: getToday() }));
+  if (info.count >= maxPerHour) return false;
+  localStorage.setItem(RATE_KEY, JSON.stringify({ count: info.count + 1, hour: getCurrentHour() }));
   return true;
 }
 
