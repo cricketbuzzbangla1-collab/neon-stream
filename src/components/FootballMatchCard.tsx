@@ -191,9 +191,12 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
             {match.league}
           </span>
           {isLive && liveMinute && (
-            <span className="ml-auto text-[10px] font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full animate-pulse">
-              {liveMinute}'
-            </span>
+            <div className="ml-auto flex items-center gap-1.5 bg-destructive/15 border border-destructive/30 px-2.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+              <span className="text-[11px] font-mono font-black tabular-nums text-destructive tracking-wide">
+                {liveMinute}'
+              </span>
+            </div>
           )}
         </div>
 
