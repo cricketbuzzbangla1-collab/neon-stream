@@ -43,6 +43,10 @@ export const ALLOWED_LEAGUES: Record<string, { name: string; country: string }> 
 
 const ALL_LEAGUE_IDS = Object.keys(ALLOWED_LEAGUES);
 
+function getToday(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 // --- Rate Limiting (localStorage, per hour) ---
 const RATE_KEY = "football_api_rate_hourly";
 
