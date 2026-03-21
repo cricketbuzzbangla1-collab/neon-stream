@@ -21,6 +21,8 @@ const SettingsManager = () => {
     footballApiEnabled: true,
     footballApiCallsPerHour: 3,
     footballApiProvider: "apifootball" as ApiProvider,
+    tmdbApiKey: "ea17f4c1fca3ed86e12ac87d94bf0fbb",
+    tmdbEnabled: true,
   });
   const [loading, setLoading] = useState(true);
 
