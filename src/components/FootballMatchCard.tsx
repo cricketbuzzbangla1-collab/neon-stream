@@ -9,20 +9,16 @@ import { toast } from "sonner";
 interface Props {
   match: FootballMatch;
   liveEvents?: LiveEvent[];
+  now?: number;
 }
 
-const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
+const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isLive = match.isLive;
   const hasScore = match.homeScore || match.awayScore;
-  const [now, setNow] = useState(Date.now());
+  const now = externalNow ?? Date.now();
   const [importing, setImporting] = useState(false);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   // Use real match minute from API (matchStatus contains minute like "45+", "67", "HT")
   const liveMinute = isLive && match.matchStatus ? match.matchStatus : "";

@@ -12,7 +12,7 @@ const INITIAL_UPCOMING_COUNT = 10;
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const { liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(Date.now());
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
   const cleanedRef = useRef<Set<string>>(new Set());
