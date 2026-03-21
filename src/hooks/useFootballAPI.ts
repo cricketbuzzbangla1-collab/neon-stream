@@ -189,8 +189,14 @@ async function fetchFromApifootball(apiKey: string): Promise<FootballMatch[]> {
 async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   const today = getToday();
   const tomorrow = getTomorrow();
-  const url = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
-  const res = await fetch(url, { headers: { "X-Auth-Token": apiKey } });
+  const targetUrl = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
+  
+  // Use CORS proxy since football-data.org blocks direct browser requests
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+  
+  const res = await fetch(proxyUrl, {
+    headers: { "X-Auth-Token": apiKey },
+  });
   if (!res.ok) { console.error(`football-data.org error: ${res.status}`); return []; }
   const json = await res.json();
   if (!json.matches || !Array.isArray(json.matches)) return [];
