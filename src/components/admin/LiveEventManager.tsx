@@ -246,7 +246,7 @@ const LiveEventManager = () => {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          🏆 Leagues ({Object.keys(ALLOWED_LEAGUES).length - disabledLeagues.length}/{Object.keys(ALLOWED_LEAGUES).length})
+          🏆 Leagues ({Object.keys(apiProvider === "footballdata" ? FOOTBALLDATA_LEAGUES : ALLOWED_LEAGUES).length - disabledLeagues.length}/{Object.keys(apiProvider === "footballdata" ? FOOTBALLDATA_LEAGUES : ALLOWED_LEAGUES).length})
         </button>
         <button
           onClick={() => setActiveTab("manual")}
