@@ -21,6 +21,8 @@ const SettingsManager = () => {
     footballApiEnabled: true,
     footballApiCallsPerHour: 3,
     footballApiProvider: "apifootball" as ApiProvider,
+    tmdbApiKey: "ea17f4c1fca3ed86e12ac87d94bf0fbb",
+    tmdbEnabled: true,
   });
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +45,8 @@ const SettingsManager = () => {
           footballApiEnabled: data.footballApiEnabled !== false,
           footballApiCallsPerHour: data.footballApiCallsPerHour || 3,
           footballApiProvider: data.footballApiProvider || "apifootball",
+          tmdbApiKey: data.tmdbApiKey || "ea17f4c1fca3ed86e12ac87d94bf0fbb",
+          tmdbEnabled: data.tmdbEnabled !== false,
         });
       }
       setLoading(false);
@@ -80,6 +84,8 @@ const SettingsManager = () => {
         footballApiEnabled: form.footballApiEnabled,
         footballApiCallsPerHour: form.footballApiCallsPerHour,
         footballApiProvider: form.footballApiProvider,
+        tmdbApiKey: form.tmdbApiKey.trim(),
+        tmdbEnabled: form.tmdbEnabled,
         updatedAt: Date.now(),
       };
       await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
@@ -220,6 +226,27 @@ const SettingsManager = () => {
           />
           <p className="text-[10px] text-muted-foreground/60 mt-1">
             প্রতি ঘণ্টায় সর্বোচ্চ কতবার API call হবে (0 = unlimited)
+          </p>
+        </div>
+      </div>
+
+      {/* TMDB API */}
+      <div className="space-y-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
+        <h4 className="text-sm font-semibold text-foreground">🎬 TMDB Movies API</h4>
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" checked={form.tmdbEnabled} onChange={(e) => setForm({ ...form, tmdbEnabled: e.target.checked })} className="rounded" />
+          Enable Movies Section
+        </label>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">TMDB API Key</label>
+          <input
+            value={form.tmdbApiKey}
+            onChange={(e) => setForm({ ...form, tmdbApiKey: e.target.value })}
+            className={inputCls}
+            placeholder="Enter TMDB API key"
+          />
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            themoviedb.org থেকে API key নিন (v3 auth)
           </p>
         </div>
       </div>
