@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLiveEvents, useCountries, addDocument, updateDocument, deleteDocument, LiveEvent } from "@/hooks/useFirestore";
-import { useFootballMatches, FootballMatch, ALLOWED_LEAGUES } from "@/hooks/useFootballAPI";
+import { useFootballMatches, FootballMatch, ALLOWED_LEAGUES, FOOTBALLDATA_LEAGUES } from "@/hooks/useFootballAPI";
 import { Plus, Trash2, Edit, Save, X, Search, ChevronLeft, ChevronRight, Zap, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { doc, updateDoc as fbUpdateDoc } from "firebase/firestore";
