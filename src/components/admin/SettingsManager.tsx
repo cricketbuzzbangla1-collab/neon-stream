@@ -84,6 +84,8 @@ const SettingsManager = () => {
         footballApiEnabled: form.footballApiEnabled,
         footballApiCallsPerHour: form.footballApiCallsPerHour,
         footballApiProvider: form.footballApiProvider,
+        tmdbApiKey: form.tmdbApiKey.trim(),
+        tmdbEnabled: form.tmdbEnabled,
         updatedAt: Date.now(),
       };
       await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
