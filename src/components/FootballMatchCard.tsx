@@ -24,6 +24,18 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
     return () => clearInterval(t);
   }, []);
 
+  // Auto-calculate live minute from startTimestamp
+  const getLiveMinute = (): string => {
+    if (!isLive) return "";
+    const elapsed = Math.floor((now - match.startTimestamp) / 60000);
+    if (elapsed <= 0) return "1";
+    if (elapsed <= 45) return String(elapsed);
+    if (elapsed <= 60) return "45+"; // HT buffer
+    if (elapsed <= 105) return String(elapsed - 15); // 2nd half: subtract 15min HT
+    return "90+";
+  };
+  const liveMinute = getLiveMinute();
+
   const matchingEvent = liveEvents.find(ev => {
     const evA = (typeof ev.teamA === "object" ? (ev.teamA as any)?.name : String(ev.teamA || "")).toLowerCase();
     const evB = (typeof ev.teamB === "object" ? (ev.teamB as any)?.name : String(ev.teamB || "")).toLowerCase();
@@ -187,9 +199,9 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
           <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider truncate">
             {match.league}
           </span>
-          {isLive && match.matchStatus && (
+          {isLive && liveMinute && (
             <span className="ml-auto text-[10px] font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full animate-pulse">
-              {match.matchStatus}'
+              {liveMinute}'
             </span>
           )}
         </div>
