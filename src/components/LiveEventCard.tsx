@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { LiveEvent, useCountries } from "@/hooks/useFirestore";
 import { useNavigate } from "react-router-dom";
-import { Play, Clock, Flame } from "lucide-react";
+import { Play, Clock, Flame, Zap } from "lucide-react";
 
 export const getEventStatus = (event: LiveEvent): "live" | "upcoming" | "finished" => {
   const ms = event.manualStatus;
@@ -52,101 +52,120 @@ const LiveEventCard = ({ event }: { event: LiveEvent }) => {
   return (
     <div
       onClick={() => navigate(`/watch/event-${event.id}`)}
-      className={`relative w-full rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.015] group ${
+      className={`relative w-full rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 active:scale-[0.98] group ${
         isLive
-          ? "ring-1 ring-destructive/25 shadow-md shadow-destructive/5"
+          ? "ring-1 ring-destructive/40 shadow-lg shadow-destructive/10"
           : isFeatured
-          ? "ring-1 ring-primary/25 shadow-md shadow-primary/5"
-          : "ring-1 ring-border/30 shadow-sm"
+          ? "ring-1 ring-primary/30 shadow-lg shadow-primary/10"
+          : "ring-1 ring-border/20 shadow-sm"
       }`}
     >
-      {/* Background */}
+      {/* Background gradient */}
       <div className={`absolute inset-0 ${
-        isLive ? "bg-gradient-to-r from-destructive/5 via-card to-destructive/5" : "bg-card"
+        isLive
+          ? "bg-gradient-to-br from-destructive/10 via-card to-destructive/5"
+          : isFeatured
+          ? "bg-gradient-to-br from-primary/10 via-card to-primary/5"
+          : "bg-card"
       }`} />
 
-      {/* Featured tag */}
+      {/* Live pulse bar */}
+      {isLive && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
+      )}
+
+      {/* Featured badge */}
       {isFeatured && (
-        <div className="absolute top-0 right-0 z-10">
-          <div className="bg-primary text-primary-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest rounded-bl-lg flex items-center gap-1">
-            <Flame className="w-2.5 h-2.5" /> Hot
+        <div className="absolute top-2 left-2 z-10">
+          <div className="bg-primary text-primary-foreground px-2 py-0.5 text-[7px] font-bold uppercase tracking-widest rounded-full flex items-center gap-1 shadow-md">
+            <Zap className="w-2.5 h-2.5 fill-current" /> Featured
           </div>
         </div>
       )}
 
-      <div className="relative z-[1] px-3 py-2.5">
-        {/* Status + Country row */}
-        <div className="flex items-center justify-between mb-2">
-          {country && (
-            <span className="text-[9px] text-muted-foreground font-medium flex items-center gap-1">
-              <span>{country.flag}</span> {country.name}
-            </span>
-          )}
-          {isLive ? (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive text-destructive-foreground text-[8px] font-black uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-              Live
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[8px] font-bold uppercase tracking-wider">
-              <Clock className="w-2.5 h-2.5" /> Soon
-            </span>
-          )}
-        </div>
-
-        {/* Teams row — compact */}
-        <div className="flex items-center gap-2">
-          {/* Team A */}
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border-2 shrink-0 ${
-            isLive ? "border-destructive/40" : "border-border/40"
-          } bg-secondary/40`}>
-            {teamALogo ? (
-              <img src={teamALogo} alt={teamAName} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm font-bold text-muted-foreground">{teamAName.charAt(0)}</span>
-            )}
+      {/* Status badge */}
+      <div className="absolute top-2 right-2 z-10">
+        {isLive ? (
+          <div className="bg-destructive text-destructive-foreground px-2.5 py-1 text-[8px] font-black uppercase tracking-wider rounded-full flex items-center gap-1 shadow-lg shadow-destructive/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+            ON AIR
           </div>
-          <span className="text-xs font-bold text-foreground truncate flex-1 min-w-0">{teamAName}</span>
+        ) : (
+          <div className="bg-secondary text-muted-foreground px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
+            <Clock className="w-2.5 h-2.5" /> Soon
+          </div>
+        )}
+      </div>
 
-          {/* VS */}
-          <div className="flex flex-col items-center shrink-0">
-            <span className={`text-[10px] font-black ${isLive ? "text-destructive" : "text-primary"}`}>VS</span>
+      <div className="relative z-[1] px-4 py-3.5">
+        {/* Country/League info */}
+        {country && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <span className="text-sm">{country.flag}</span>
+            <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{country.name}</span>
+          </div>
+        )}
+
+        {/* Teams row */}
+        <div className="flex items-center">
+          {/* Home */}
+          <div className="flex-1 flex items-center gap-2.5 min-w-0">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden border-2 shrink-0 bg-secondary/50 ${
+              isLive ? "border-destructive/30" : "border-border/30"
+            }`}>
+              {teamALogo ? (
+                <img src={teamALogo} alt={teamAName} className="w-9 h-9 object-contain" loading="lazy" />
+              ) : (
+                <span className="text-base font-bold text-muted-foreground">{teamAName.charAt(0)}</span>
+              )}
+            </div>
+            <span className="text-xs font-bold text-foreground truncate leading-tight">{teamAName}</span>
+          </div>
+
+          {/* VS / Countdown */}
+          <div className="flex flex-col items-center shrink-0 mx-3 min-w-[50px]">
+            <div className={`px-3 py-1.5 rounded-xl ${isLive ? "bg-destructive/15" : "bg-secondary/60"}`}>
+              <span className={`text-sm font-black ${isLive ? "text-destructive" : "text-primary"}`}>VS</span>
+            </div>
             {status === "upcoming" && countdown() && (
-              <span className="text-[8px] font-mono font-bold text-primary tabular-nums">{countdown()}</span>
+              <span className="text-[9px] font-mono font-bold text-primary tabular-nums mt-1 bg-primary/10 px-2 py-0.5 rounded-full">
+                {countdown()}
+              </span>
             )}
-            {isLive && <span className="text-[7px] font-bold text-destructive animate-pulse">ON AIR</span>}
           </div>
 
-          {/* Team B */}
-          <span className="text-xs font-bold text-foreground truncate flex-1 min-w-0 text-right">{teamBName}</span>
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border-2 shrink-0 ${
-            isLive ? "border-destructive/40" : "border-border/40"
-          } bg-secondary/40`}>
-            {teamBLogo ? (
-              <img src={teamBLogo} alt={teamBName} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm font-bold text-muted-foreground">{teamBName.charAt(0)}</span>
-            )}
+          {/* Away */}
+          <div className="flex-1 flex items-center gap-2.5 min-w-0 justify-end">
+            <span className="text-xs font-bold text-foreground truncate text-right leading-tight">{teamBName}</span>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden border-2 shrink-0 bg-secondary/50 ${
+              isLive ? "border-destructive/30" : "border-border/30"
+            }`}>
+              {teamBLogo ? (
+                <img src={teamBLogo} alt={teamBName} className="w-9 h-9 object-contain" loading="lazy" />
+              ) : (
+                <span className="text-base font-bold text-muted-foreground">{teamBName.charAt(0)}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Bottom: time + button */}
-        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/15">
-          <span className="text-[9px] text-muted-foreground">
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/10">
+          <span className="text-[9px] text-muted-foreground/70">
             {new Date(event.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
             {" • "}
             {new Date(event.startTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
           </span>
           <button
             onClick={(e) => { e.stopPropagation(); navigate(`/watch/event-${event.id}`); }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide transition-all ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all shadow-md ${
               isLive
-                ? "bg-destructive text-destructive-foreground hover:opacity-90"
-                : "bg-primary text-primary-foreground hover:opacity-90"
+                ? "bg-destructive text-destructive-foreground shadow-destructive/20 hover:shadow-destructive/40"
+                : "bg-primary text-primary-foreground shadow-primary/20 hover:shadow-primary/40"
             }`}
           >
             <Play className="w-2.5 h-2.5 fill-current" />
-            {isLive ? "Watch" : "Set"}
+            {isLive ? "Watch" : "Remind"}
           </button>
         </div>
       </div>

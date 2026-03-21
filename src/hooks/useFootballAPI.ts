@@ -15,6 +15,7 @@ export interface FootballMatch {
   matchStatus: string;
   isLive: boolean;
   league: string;
+  leagueId: string;
   leagueLogo: string;
   country: string;
   stadium: string;
@@ -23,6 +24,21 @@ export interface FootballMatch {
 
 const DEFAULT_API_KEY = "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7";
 const API_BASE = "https://apiv3.apifootball.com/";
+
+// Major league IDs
+const MAJOR_LEAGUE_IDS = new Set([
+  "152",  // Premier League (England)
+  "175",  // Bundesliga (Germany)
+  "207",  // Serie A (Italy)
+  "302",  // La Liga (Spain)
+  "168",  // Ligue 1 (France)
+  "3",    // UEFA Champions League
+  "4",    // UEFA Europa League
+  "683",  // UEFA Conference League
+  "346",  // CAF Champions League
+  "727",  // AFC Champions League
+  "10",   // AFC Champions League Elite
+]);
 
 function parseMatch(m: any): FootballMatch {
   return {
@@ -38,6 +54,7 @@ function parseMatch(m: any): FootballMatch {
     matchStatus: m.match_status || "",
     isLive: m.match_live === "1",
     league: m.league_name || "",
+    leagueId: m.league_id || "",
     leagueLogo: m.league_logo || "",
     country: m.country_name || "",
     stadium: m.match_stadium || "",
@@ -46,8 +63,7 @@ function parseMatch(m: any): FootballMatch {
 }
 
 function getToday(): string {
-  const d = new Date();
-  return d.toISOString().split("T")[0];
+  return new Date().toISOString().split("T")[0];
 }
 
 function getTomorrow(): string {
@@ -56,9 +72,8 @@ function getTomorrow(): string {
   return d.toISOString().split("T")[0];
 }
 
-// Cache
 let matchCache: { data: FootballMatch[]; ts: number } | null = null;
-const CACHE_TTL = 60_000; // 1 min
+const CACHE_TTL = 60_000;
 
 export function useFootballMatches() {
   const [matches, setMatches] = useState<FootballMatch[]>(matchCache?.data || []);
@@ -66,7 +81,6 @@ export function useFootballMatches() {
   const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
   const [enabled, setEnabled] = useState(true);
 
-  // Listen for API key from settings
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "appSettings", "main"), (snap) => {
       if (snap.exists()) {
@@ -82,7 +96,6 @@ export function useFootballMatches() {
   const fetchMatches = useCallback(async () => {
     if (!enabled || !apiKey) return;
 
-    // Use cache if fresh
     if (matchCache && Date.now() - matchCache.ts < CACHE_TTL) {
       setMatches(matchCache.data);
       setLoading(false);
@@ -92,15 +105,17 @@ export function useFootballMatches() {
     try {
       const today = getToday();
       const tomorrow = getTomorrow();
+      const leagueIds = [...MAJOR_LEAGUE_IDS].join(",");
 
-      // Fetch today + tomorrow matches
-      const url = `${API_BASE}?action=get_events&from=${today}&to=${tomorrow}&APIkey=${apiKey}`;
+      const url = `${API_BASE}?action=get_events&from=${today}&to=${tomorrow}&league_id=${leagueIds}&APIkey=${apiKey}`;
       const res = await fetch(url);
       const json = await res.json();
 
       if (Array.isArray(json)) {
-        const parsed = json.map(parseMatch);
-        // Sort: live first, then by time
+        const parsed = json
+          .map(parseMatch)
+          .filter(m => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
+
         parsed.sort((a, b) => {
           if (a.isLive && !b.isLive) return -1;
           if (!a.isLive && b.isLive) return 1;
@@ -120,14 +135,12 @@ export function useFootballMatches() {
 
   useEffect(() => {
     fetchMatches();
-    // Refresh every 60s for live scores
     const interval = setInterval(fetchMatches, 60_000);
     return () => clearInterval(interval);
   }, [fetchMatches]);
 
   const liveMatches = matches.filter(m => m.isLive);
   const upcomingMatches = matches.filter(m => !m.isLive && !m.matchStatus);
-  const finishedMatches = matches.filter(m => !m.isLive && m.matchStatus === "Finished");
 
-  return { matches, liveMatches, upcomingMatches, finishedMatches, loading, enabled };
+  return { matches, liveMatches, upcomingMatches, loading, enabled };
 }
