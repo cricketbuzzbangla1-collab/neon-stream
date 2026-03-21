@@ -59,6 +59,7 @@ const SettingsManager = () => {
         adsEnabled: form.adsEnabled,
         footballApiKey: form.footballApiKey,
         footballApiEnabled: form.footballApiEnabled,
+        footballApiCallsPerHour: form.footballApiCallsPerHour,
         updatedAt: Date.now(),
       };
       await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
