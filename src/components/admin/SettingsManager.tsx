@@ -51,6 +51,19 @@ const SettingsManager = () => {
   }, []);
 
   const handleSave = async () => {
+    const trimmedApiKey = form.footballApiKey.trim();
+    const trimmedFootballDataKey = form.footballdataApiKey.trim();
+
+    if (form.footballApiProvider === "apifootball" && !trimmedApiKey) {
+      toast.error("apifootball.com API key দিন");
+      return;
+    }
+
+    if (form.footballApiProvider === "footballdata" && !trimmedFootballDataKey) {
+      toast.error("football-data.org API key দিন");
+      return;
+    }
+
     try {
       const payload = {
         siteName: form.siteName,
@@ -62,15 +75,15 @@ const SettingsManager = () => {
         noticeLink: form.noticeLink,
         defaultTheme: form.defaultTheme,
         adsEnabled: form.adsEnabled,
-        footballApiKey: form.footballApiKey,
-        footballdataApiKey: form.footballdataApiKey,
+        footballApiKey: trimmedApiKey,
+        footballdataApiKey: trimmedFootballDataKey,
         footballApiEnabled: form.footballApiEnabled,
         footballApiCallsPerHour: form.footballApiCallsPerHour,
         footballApiProvider: form.footballApiProvider,
         updatedAt: Date.now(),
       };
       await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
-      toast.success("Settings saved");
+      toast.success(`Settings saved • Active provider: ${form.footballApiProvider}`);
     } catch (err: any) {
       console.error("Settings save error:", err);
       toast.error("Error saving: " + (err?.message || "Unknown"));
