@@ -191,13 +191,65 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   const tomorrow = getTomorrow();
   const targetUrl = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
   
-  // Use CORS proxy since football-data.org blocks direct browser requests
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+  // Try multiple CORS proxy approaches
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl + `&__token=${apiKey}`)}`,
+    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+  ];
+
+  let lastError: any = null;
   
-  const res = await fetch(proxyUrl, {
-    headers: { "X-Auth-Token": apiKey },
-  });
-  if (!res.ok) { console.error(`football-data.org error: ${res.status}`); return []; }
+  for (const proxyUrl of proxies) {
+    try {
+      const headers: Record<string, string> = {};
+      // allorigins passes raw URL, corsproxy passes headers
+      if (!proxyUrl.includes("allorigins")) {
+        headers["X-Auth-Token"] = apiKey;
+      }
+      
+      const res = await fetch(proxyUrl, { headers });
+      
+      if (!res.ok) {
+        lastError = `Status ${res.status}`;
+        continue;
+      }
+      
+      const text = await res.text();
+      // allorigins won't pass the auth header, so it will fail — skip to direct approach
+      if (text.includes("error") && text.includes("403")) {
+        lastError = "Auth failed via proxy";
+        continue;
+      }
+      
+      const json = JSON.parse(text);
+      if (json.matches && Array.isArray(json.matches)) {
+        console.log(`✅ football-data.org: Success via proxy`);
+        return json.matches;
+      }
+      lastError = "Invalid response format";
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  // Direct fetch as final attempt (works on deployed sites, may fail in preview due to CORS)
+  try {
+    const res = await fetch(targetUrl, {
+      headers: { "X-Auth-Token": apiKey },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.matches && Array.isArray(json.matches)) {
+        console.log(`✅ football-data.org: Success via direct fetch`);
+        return json.matches;
+      }
+    }
+  } catch (err) {
+    console.warn("football-data.org direct fetch failed (CORS expected in preview):", err);
+  }
+
+  console.error(`football-data.org: All fetch attempts failed. Last error:`, lastError);
+  return [];
   const json = await res.json();
   if (!json.matches || !Array.isArray(json.matches)) return [];
   const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
