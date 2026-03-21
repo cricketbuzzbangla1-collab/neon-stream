@@ -25,6 +25,7 @@ const Navbar = () => {
   const navItems = [
     { to: "/", icon: Home, label: "Home" },
     { to: "/channels", icon: Tv, label: "Channels" },
+    { to: "/movies", icon: Film, label: "Movies" },
     { to: "/chat", icon: MessageCircle, label: "Community" },
   ];
 

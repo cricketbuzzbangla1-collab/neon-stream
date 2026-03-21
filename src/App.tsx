@@ -57,6 +57,7 @@ const AppContent = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/favorites" element={<Favorites />} />
+          <Route path="/movies" element={<Movies />} />
           <Route path="/my-playlist" element={<MyPlaylist />} />
           <Route path="/playlist/:playlistId/:channelIndex" element={<PlaylistWatch />} />
           <Route path="*" element={<NotFound />} />

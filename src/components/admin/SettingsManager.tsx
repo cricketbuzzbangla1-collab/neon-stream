@@ -230,6 +230,27 @@ const SettingsManager = () => {
         </div>
       </div>
 
+      {/* TMDB API */}
+      <div className="space-y-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
+        <h4 className="text-sm font-semibold text-foreground">🎬 TMDB Movies API</h4>
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" checked={form.tmdbEnabled} onChange={(e) => setForm({ ...form, tmdbEnabled: e.target.checked })} className="rounded" />
+          Enable Movies Section
+        </label>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">TMDB API Key</label>
+          <input
+            value={form.tmdbApiKey}
+            onChange={(e) => setForm({ ...form, tmdbApiKey: e.target.value })}
+            className={inputCls}
+            placeholder="Enter TMDB API key"
+          />
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            themoviedb.org থেকে API key নিন (v3 auth)
+          </p>
+        </div>
+      </div>
+
       <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
         <Save className="w-4 h-4" /> Save Settings
       </button>
