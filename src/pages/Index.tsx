@@ -18,7 +18,7 @@ const Index = () => {
   const cleanedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const t = setInterval(() => setTick(n => n + 1), 1000);
+    const t = setInterval(() => setTick(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
