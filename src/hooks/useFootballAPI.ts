@@ -125,10 +125,15 @@ function normalizeKey(value: string): string {
 
 function parseApifootballMatch(m: any): FootballMatch {
   const matchDate = m.match_date || "";
-  const matchTime = m.match_time || "";
+  const matchTimeRaw = m.match_time || "";
   const [year, month, day] = matchDate.split("-").map(Number);
-  const [hour, minute] = matchTime.split(":").map(Number);
-  const startTimestamp = new Date(year, month - 1, day, hour, minute).getTime();
+  const [hour, minute] = matchTimeRaw.split(":").map(Number);
+  // API returns UTC time, so use Date.UTC for correct timestamp
+  const startTimestamp = Date.UTC(year, month - 1, day, hour, minute);
+  // Convert to local time for display
+  const localDate = new Date(startTimestamp);
+  const localTime = `${localDate.getHours().toString().padStart(2, "0")}:${localDate.getMinutes().toString().padStart(2, "0")}`;
+  const localDateStr = `${localDate.getFullYear()}-${(localDate.getMonth() + 1).toString().padStart(2, "0")}-${localDate.getDate().toString().padStart(2, "0")}`;
 
   return {
     id: String(m.match_id || ""),
@@ -138,8 +143,8 @@ function parseApifootballMatch(m: any): FootballMatch {
     awayLogo: m.team_away_badge || "",
     homeScore: m.match_hometeam_score || "",
     awayScore: m.match_awayteam_score || "",
-    matchTime,
-    matchDate,
+    matchTime: localTime,
+    matchDate: localDateStr,
     matchStatus: m.match_status || "",
     isLive: m.match_live === "1",
     league: m.league_name || "",
