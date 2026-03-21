@@ -195,8 +195,28 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   const tomorrow = getTomorrow();
   const targetUrl = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
 
+  // Vercel proxy URL (works on deployed sites)
+  const isProduction = window.location.hostname !== "localhost" && !window.location.hostname.includes("lovableproject.com");
+  const proxyApiUrl = `/api/football-proxy?dateFrom=${today}&dateTo=${tomorrow}&token=${encodeURIComponent(apiKey)}`;
+
   try {
     let json: any = null;
+
+    // Method 0: Vercel serverless proxy (best for production)
+    if (isProduction) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(proxyApiUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          json = await res.json();
+          console.log("✅ football-data.org: Vercel proxy success");
+        }
+      } catch (e: any) {
+        console.warn("Vercel proxy failed:", e?.message || e);
+      }
+    }
 
     // Method 1: Direct fetch with CORS (football-data.org supports CORS)
     try {
