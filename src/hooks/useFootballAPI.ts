@@ -190,21 +190,31 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   const today = getToday();
   const tomorrow = getTomorrow();
   const targetUrl = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
-  
-  // Use CORS proxy since football-data.org blocks direct browser requests
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-  
-  const res = await fetch(proxyUrl, {
-    headers: { "X-Auth-Token": apiKey },
-  });
-  if (!res.ok) { console.error(`football-data.org error: ${res.status}`); return []; }
-  const json = await res.json();
-  if (!json.matches || !Array.isArray(json.matches)) return [];
-  const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
-  return json.matches
-    .filter((m: any) => allowedCodes.includes(m.competition?.code))
-    .map(parseFootballdataMatch)
-    .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
+
+  try {
+    const res = await fetch(targetUrl, {
+      headers: { "X-Auth-Token": apiKey },
+      mode: "cors",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      console.error(`football-data.org error ${res.status}: ${errorText}`);
+      return [];
+    }
+
+    const json = await res.json();
+    if (!json.matches || !Array.isArray(json.matches)) return [];
+
+    const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
+    return json.matches
+      .filter((m: any) => allowedCodes.includes(m.competition?.code))
+      .map(parseFootballdataMatch)
+      .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
+  } catch (err) {
+    console.error("football-data.org fetch error:", err);
+    return [];
+  }
 }
 
 // ===== Hook =====
