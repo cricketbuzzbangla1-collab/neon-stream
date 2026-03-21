@@ -3,6 +3,7 @@ import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
+import type { ApiProvider } from "@/hooks/useFootballAPI";
 
 const SettingsManager = () => {
   const [form, setForm] = useState({
@@ -15,9 +16,11 @@ const SettingsManager = () => {
     noticeLink: "",
     defaultTheme: "dark-neon",
     adsEnabled: false,
-    footballApiKey: "e4df9b4f6d364f2d9950728666d9a897",
+    footballApiKey: "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+    footballdataApiKey: "e4df9b4f6d364f2d9950728666d9a897",
     footballApiEnabled: true,
     footballApiCallsPerHour: 3,
+    footballApiProvider: "apifootball" as ApiProvider,
   });
   const [loading, setLoading] = useState(true);
 
@@ -35,9 +38,11 @@ const SettingsManager = () => {
           noticeLink: data.noticeLink || "",
           defaultTheme: data.defaultTheme || "dark-neon",
           adsEnabled: data.adsEnabled || false,
-          footballApiKey: data.footballApiKey || "e4df9b4f6d364f2d9950728666d9a897",
+          footballApiKey: data.footballApiKey || "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+          footballdataApiKey: data.footballdataApiKey || "e4df9b4f6d364f2d9950728666d9a897",
           footballApiEnabled: data.footballApiEnabled !== false,
           footballApiCallsPerHour: data.footballApiCallsPerHour || 3,
+          footballApiProvider: data.footballApiProvider || "apifootball",
         });
       }
       setLoading(false);
@@ -58,8 +63,10 @@ const SettingsManager = () => {
         defaultTheme: form.defaultTheme,
         adsEnabled: form.adsEnabled,
         footballApiKey: form.footballApiKey,
+        footballdataApiKey: form.footballdataApiKey,
         footballApiEnabled: form.footballApiEnabled,
         footballApiCallsPerHour: form.footballApiCallsPerHour,
+        footballApiProvider: form.footballApiProvider,
         updatedAt: Date.now(),
       };
       await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
@@ -114,7 +121,7 @@ const SettingsManager = () => {
           </select>
         </div>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Notice Link (optional, makes bar clickable)</label>
+          <label className="text-xs text-muted-foreground mb-1 block">Notice Link (optional)</label>
           <input value={form.noticeLink} onChange={(e) => setForm({ ...form, noticeLink: e.target.value })} className={inputCls} placeholder="https://..." />
         </div>
       </div>
@@ -136,23 +143,56 @@ const SettingsManager = () => {
 
       {/* Football API */}
       <div className="space-y-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
-        <h4 className="text-sm font-semibold text-foreground">⚽ Football API (football-data.org)</h4>
+        <h4 className="text-sm font-semibold text-foreground">⚽ Football API</h4>
         <label className="flex items-center gap-2 text-sm text-foreground">
           <input type="checkbox" checked={form.footballApiEnabled} onChange={(e) => setForm({ ...form, footballApiEnabled: e.target.checked })} className="rounded" />
           Enable Auto Football Matches
         </label>
+
+        {/* Provider selector */}
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">API Key</label>
-          <input
-            value={form.footballApiKey}
-            onChange={(e) => setForm({ ...form, footballApiKey: e.target.value })}
+          <label className="text-xs text-muted-foreground mb-1 block">API Provider</label>
+          <select
+            value={form.footballApiProvider}
+            onChange={(e) => setForm({ ...form, footballApiProvider: e.target.value as ApiProvider })}
             className={inputCls}
-            placeholder="Enter apifootball.com API key"
-          />
+          >
+            <option value="apifootball">apifootball.com (More leagues)</option>
+            <option value="footballdata">football-data.org (Free tier)</option>
+          </select>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            Get your key from football-data.org — auto-fetches live & upcoming matches
+            {form.footballApiProvider === "apifootball"
+              ? "apifootball.com — EPL, La Liga, Serie A, Bundesliga, Ligue 1, Saudi Pro, MLS, UCL, UEL, UECL, Nations League"
+              : "football-data.org — EPL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, Euro, World Cup (free tier)"}
           </p>
         </div>
+
+        {/* apifootball.com key */}
+        {form.footballApiProvider === "apifootball" && (
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">apifootball.com API Key</label>
+            <input
+              value={form.footballApiKey}
+              onChange={(e) => setForm({ ...form, footballApiKey: e.target.value })}
+              className={inputCls}
+              placeholder="Enter apifootball.com API key"
+            />
+          </div>
+        )}
+
+        {/* football-data.org key */}
+        {form.footballApiProvider === "footballdata" && (
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">football-data.org API Key</label>
+            <input
+              value={form.footballdataApiKey}
+              onChange={(e) => setForm({ ...form, footballdataApiKey: e.target.value })}
+              className={inputCls}
+              placeholder="Enter football-data.org API key"
+            />
+          </div>
+        )}
+
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">API Calls Per Hour (Max)</label>
           <input

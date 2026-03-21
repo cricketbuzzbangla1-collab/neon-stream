@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLiveEvents, useCountries, addDocument, updateDocument, deleteDocument, LiveEvent } from "@/hooks/useFirestore";
-import { useFootballMatches, FootballMatch, ALLOWED_LEAGUES } from "@/hooks/useFootballAPI";
+import { useFootballMatches, FootballMatch, ALLOWED_LEAGUES, FOOTBALLDATA_LEAGUES } from "@/hooks/useFootballAPI";
 import { Plus, Trash2, Edit, Save, X, Search, ChevronLeft, ChevronRight, Zap, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { doc, updateDoc as fbUpdateDoc } from "firebase/firestore";
@@ -24,7 +24,7 @@ const DURATION_PRESETS = [
 const LiveEventManager = () => {
   const { data: events } = useLiveEvents();
   const { data: countries } = useCountries();
-  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled, disabledLeagues } = useFootballMatches();
+  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled, disabledLeagues, apiProvider } = useFootballMatches();
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -246,7 +246,7 @@ const LiveEventManager = () => {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          🏆 Leagues ({Object.keys(ALLOWED_LEAGUES).length - disabledLeagues.length}/{Object.keys(ALLOWED_LEAGUES).length})
+          🏆 Leagues ({Object.keys(apiProvider === "footballdata" ? FOOTBALLDATA_LEAGUES : ALLOWED_LEAGUES).length - disabledLeagues.length}/{Object.keys(apiProvider === "footballdata" ? FOOTBALLDATA_LEAGUES : ALLOWED_LEAGUES).length})
         </button>
         <button
           onClick={() => setActiveTab("manual")}
@@ -268,7 +268,7 @@ const LiveEventManager = () => {
             <span>লীগ ON/OFF করুন। বন্ধ করা লীগের ম্যাচ Homepage-এ দেখাবে না।</span>
           </div>
           <div className="space-y-2">
-            {Object.entries(ALLOWED_LEAGUES).map(([id, info]) => {
+            {Object.entries(apiProvider === "footballdata" ? FOOTBALLDATA_LEAGUES : ALLOWED_LEAGUES).map(([id, info]) => {
               const isEnabled = !disabledLeagues.includes(id);
               return (
                 <div key={id} className={`glass-card p-3 flex items-center justify-between gap-3 ${isEnabled ? "ring-1 ring-primary/20" : "opacity-60"}`}>
