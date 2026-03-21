@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useLiveEvents } from "@/hooks/useFirestore";
+import { useState, useEffect, useRef } from "react";
+import { useLiveEvents, updateDocument } from "@/hooks/useFirestore";
 import { useFootballMatches } from "@/hooks/useFootballAPI";
 import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
