@@ -24,7 +24,7 @@ const DURATION_PRESETS = [
 const LiveEventManager = () => {
   const { data: events } = useLiveEvents();
   const { data: countries } = useCountries();
-  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled, disabledLeagues } = useFootballMatches();
+  const { matches: apiMatches, loading: apiLoading, enabled: apiEnabled, disabledLeagues, apiProvider } = useFootballMatches();
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
