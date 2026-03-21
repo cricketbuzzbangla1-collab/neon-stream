@@ -34,6 +34,8 @@ const SettingsManager = () => {
           noticeLink: data.noticeLink || "",
           defaultTheme: data.defaultTheme || "dark-neon",
           adsEnabled: data.adsEnabled || false,
+          footballApiKey: data.footballApiKey || "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+          footballApiEnabled: data.footballApiEnabled !== false,
         });
       }
       setLoading(false);
