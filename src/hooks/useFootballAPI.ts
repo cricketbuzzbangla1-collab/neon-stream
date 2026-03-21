@@ -224,7 +224,7 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
       const json = JSON.parse(text);
       if (json.matches && Array.isArray(json.matches)) {
         console.log(`✅ football-data.org: Success via proxy`);
-        return json.matches;
+        return filterFootballdataMatches(json.matches);
       }
       lastError = "Invalid response format";
     } catch (err) {
