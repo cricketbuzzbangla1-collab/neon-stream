@@ -251,7 +251,10 @@ async function fetchFromApifootball(apiKey: string): Promise<FootballMatch[]> {
     return json
       .map(parseApifootballMatch)
       .filter((m: FootballMatch) => Object.prototype.hasOwnProperty.call(ALLOWED_LEAGUES, m.leagueId))
-      .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
+      .filter((m: FootballMatch) => {
+        const s = m.matchStatus?.toLowerCase();
+        return s !== "finished" && s !== "ft" && s !== "after pens." && s !== "after et" && s !== "cancelled" && s !== "postponed" && s !== "awarded";
+      });
   } catch (err) {
     console.error("apifootball.com fetch error:", err);
     return [];
