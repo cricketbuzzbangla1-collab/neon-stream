@@ -15,6 +15,8 @@ const SettingsManager = () => {
     noticeLink: "",
     defaultTheme: "dark-neon",
     adsEnabled: false,
+    footballApiKey: "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+    footballApiEnabled: true,
   });
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +34,8 @@ const SettingsManager = () => {
           noticeLink: data.noticeLink || "",
           defaultTheme: data.defaultTheme || "dark-neon",
           adsEnabled: data.adsEnabled || false,
+          footballApiKey: data.footballApiKey || "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+          footballApiEnabled: data.footballApiEnabled !== false,
         });
       }
       setLoading(false);
@@ -51,6 +55,8 @@ const SettingsManager = () => {
         noticeLink: form.noticeLink,
         defaultTheme: form.defaultTheme,
         adsEnabled: form.adsEnabled,
+        footballApiKey: form.footballApiKey,
+        footballApiEnabled: form.footballApiEnabled,
         updatedAt: Date.now(),
       };
       await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
@@ -116,8 +122,6 @@ const SettingsManager = () => {
           <label className="text-xs text-muted-foreground mb-1 block">Default Theme</label>
           <select value={form.defaultTheme} onChange={(e) => setForm({ ...form, defaultTheme: e.target.value })} className={inputCls}>
             <option value="dark-neon">Dark Neon</option>
-            <option value="dark-blue">Dark Blue</option>
-            <option value="amoled">AMOLED</option>
             <option value="light">Light</option>
           </select>
         </div>
@@ -125,6 +129,27 @@ const SettingsManager = () => {
           <input type="checkbox" checked={form.adsEnabled} onChange={(e) => setForm({ ...form, adsEnabled: e.target.checked })} className="rounded" />
           Enable Ads Globally
         </label>
+      </div>
+
+      {/* Football API */}
+      <div className="space-y-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
+        <h4 className="text-sm font-semibold text-foreground">⚽ Football API (apifootball.com)</h4>
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" checked={form.footballApiEnabled} onChange={(e) => setForm({ ...form, footballApiEnabled: e.target.checked })} className="rounded" />
+          Enable Auto Football Matches
+        </label>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">API Key</label>
+          <input
+            value={form.footballApiKey}
+            onChange={(e) => setForm({ ...form, footballApiKey: e.target.value })}
+            className={inputCls}
+            placeholder="Enter apifootball.com API key"
+          />
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            Get your key from apifootball.com — auto-fetches live & upcoming matches
+          </p>
+        </div>
       </div>
 
       <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all duration-300">
