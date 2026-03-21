@@ -1,6 +1,6 @@
 import { FootballMatch } from "@/hooks/useFootballAPI";
 import { LiveEvent } from "@/hooks/useFirestore";
-import { Flame } from "lucide-react";
+import { Flame, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Props {
@@ -13,14 +13,13 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
   const isLive = match.isLive;
   const hasScore = match.homeScore || match.awayScore;
 
-  // Try to find a matching live event by team name similarity
   const matchingEvent = liveEvents.find(ev => {
-    const evTeamA = (typeof ev.teamA === "object" ? (ev.teamA as any)?.name : String(ev.teamA || "")).toLowerCase();
-    const evTeamB = (typeof ev.teamB === "object" ? (ev.teamB as any)?.name : String(ev.teamB || "")).toLowerCase();
+    const evA = (typeof ev.teamA === "object" ? (ev.teamA as any)?.name : String(ev.teamA || "")).toLowerCase();
+    const evB = (typeof ev.teamB === "object" ? (ev.teamB as any)?.name : String(ev.teamB || "")).toLowerCase();
     const home = match.homeTeam.toLowerCase();
     const away = match.awayTeam.toLowerCase();
-    return (evTeamA.includes(home) || home.includes(evTeamA) || evTeamB.includes(away) || away.includes(evTeamB)) 
-      && evTeamA.length > 1 && evTeamB.length > 1;
+    return (evA.includes(home) || home.includes(evA) || evB.includes(away) || away.includes(evB))
+      && evA.length > 2 && evB.length > 2;
   });
 
   const handleClick = () => {
@@ -29,90 +28,121 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
     }
   };
 
+  const leagueColors: Record<string, string> = {
+    "Premier League": "from-purple-600/20 to-purple-900/10",
+    "La Liga": "from-orange-600/20 to-orange-900/10",
+    "Serie A": "from-blue-600/20 to-blue-900/10",
+    "Bundesliga": "from-red-600/20 to-red-900/10",
+    "Ligue 1": "from-green-600/20 to-green-900/10",
+    "UEFA Champions League": "from-blue-500/20 to-indigo-900/10",
+    "UEFA Europa League": "from-orange-500/20 to-amber-900/10",
+  };
+
+  const gradientClass = leagueColors[match.league] || "from-primary/10 to-card";
+
   return (
     <div
       onClick={handleClick}
-      className={`relative w-full rounded-xl overflow-hidden transition-all duration-300 ${
-        matchingEvent ? "cursor-pointer hover:scale-[1.01]" : "opacity-80"
+      className={`relative w-full rounded-2xl overflow-hidden transition-all duration-300 ${
+        matchingEvent ? "cursor-pointer active:scale-[0.98]" : ""
       } ${
         isLive
-          ? "ring-1 ring-destructive/30 shadow-md shadow-destructive/5"
-          : "ring-1 ring-border/30 shadow-sm"
-      } bg-card`}
+          ? "ring-1 ring-destructive/40 shadow-lg shadow-destructive/10"
+          : "ring-1 ring-border/20 shadow-sm"
+      }`}
     >
-      {/* Live badge */}
+      {/* Gradient background */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradientClass}`} />
+      <div className="absolute inset-0 bg-card/80 backdrop-blur-sm" />
+
+      {/* Live pulse bar */}
       {isLive && (
-        <div className="absolute top-0 right-0 z-10">
-          <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest rounded-bl-lg flex items-center gap-1">
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
+      )}
+
+      {/* Watch badge */}
+      {matchingEvent && (
+        <div className="absolute top-2 right-2 z-10">
+          <div className="bg-primary text-primary-foreground px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 shadow-lg shadow-primary/20">
+            <Play className="w-2.5 h-2.5 fill-current" /> Watch
+          </div>
+        </div>
+      )}
+
+      {/* Live badge */}
+      {isLive && !matchingEvent && (
+        <div className="absolute top-2 right-2 z-10">
+          <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
             <Flame className="w-2.5 h-2.5" /> Live
           </div>
         </div>
       )}
 
-      {/* Has stream indicator */}
-      {matchingEvent && (
-        <div className="absolute top-0 left-0 z-10">
-          <div className="bg-primary text-primary-foreground px-2 py-0.5 text-[7px] font-bold uppercase tracking-widest rounded-br-lg">
-            ▶ Watch
-          </div>
-        </div>
-      )}
-
-      <div className="px-3 py-2.5">
-        {/* League + Country */}
-        <div className="flex items-center gap-1.5 mb-2">
+      <div className="relative z-[1] px-4 py-3">
+        {/* League header */}
+        <div className="flex items-center gap-2 mb-3">
           {match.leagueLogo && (
-            <img src={match.leagueLogo} alt="" className="w-3.5 h-3.5 object-contain" loading="lazy" />
+            <img src={match.leagueLogo} alt="" className="w-4 h-4 object-contain rounded-sm" loading="lazy" />
           )}
-          <span className="text-[9px] text-muted-foreground font-medium truncate">
-            {match.country} • {match.league}
+          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider truncate">
+            {match.league}
           </span>
-          {match.round && (
-            <span className="text-[8px] text-muted-foreground/60 ml-auto shrink-0">R{match.round}</span>
+          {isLive && match.matchStatus && (
+            <span className="ml-auto text-[10px] font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full animate-pulse">
+              {match.matchStatus}'
+            </span>
           )}
         </div>
 
-        {/* Teams row */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-border/40 bg-secondary/40 shrink-0">
-            {match.homeLogo ? (
-              <img src={match.homeLogo} alt={match.homeTeam} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <span className="text-xs font-bold text-muted-foreground">{match.homeTeam.charAt(0)}</span>
-            )}
+        {/* Teams */}
+        <div className="flex items-center">
+          {/* Home team */}
+          <div className="flex-1 flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
+              {match.homeLogo ? (
+                <img src={match.homeLogo} alt={match.homeTeam} className="w-8 h-8 object-contain" loading="lazy" />
+              ) : (
+                <span className="text-sm font-bold text-muted-foreground">{match.homeTeam.charAt(0)}</span>
+              )}
+            </div>
+            <span className="text-xs font-bold text-foreground truncate">{match.homeTeam}</span>
           </div>
-          <span className="text-[11px] font-bold text-foreground truncate flex-1 min-w-0">{match.homeTeam}</span>
 
-          <div className="flex flex-col items-center shrink-0 min-w-[40px]">
+          {/* Score / VS */}
+          <div className="flex flex-col items-center shrink-0 mx-3 min-w-[48px]">
             {hasScore ? (
-              <span className={`text-sm font-black tabular-nums ${isLive ? "text-destructive" : "text-foreground"}`}>
-                {match.homeScore} - {match.awayScore}
-              </span>
+              <div className={`px-3 py-1 rounded-lg ${isLive ? "bg-destructive/15" : "bg-secondary/60"}`}>
+                <span className={`text-base font-black tabular-nums tracking-wider ${isLive ? "text-destructive" : "text-foreground"}`}>
+                  {match.homeScore} — {match.awayScore}
+                </span>
+              </div>
             ) : (
-              <span className="text-[10px] font-black text-primary">VS</span>
-            )}
-            {isLive && match.matchStatus && (
-              <span className="text-[7px] font-bold text-destructive animate-pulse">{match.matchStatus}'</span>
+              <div className="px-3 py-1.5 rounded-lg bg-secondary/60">
+                <span className="text-[10px] font-black text-muted-foreground">{match.matchTime}</span>
+              </div>
             )}
           </div>
 
-          <span className="text-[11px] font-bold text-foreground truncate flex-1 min-w-0 text-right">{match.awayTeam}</span>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-border/40 bg-secondary/40 shrink-0">
-            {match.awayLogo ? (
-              <img src={match.awayLogo} alt={match.awayTeam} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <span className="text-xs font-bold text-muted-foreground">{match.awayTeam.charAt(0)}</span>
-            )}
+          {/* Away team */}
+          <div className="flex-1 flex items-center gap-2.5 min-w-0 justify-end">
+            <span className="text-xs font-bold text-foreground truncate text-right">{match.awayTeam}</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
+              {match.awayLogo ? (
+                <img src={match.awayLogo} alt={match.awayTeam} className="w-8 h-8 object-contain" loading="lazy" />
+              ) : (
+                <span className="text-sm font-bold text-muted-foreground">{match.awayTeam.charAt(0)}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Bottom info */}
-        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/15">
-          <span className="text-[9px] text-muted-foreground">
-            {match.matchDate} • {match.matchTime}
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/10">
+          <span className="text-[9px] text-muted-foreground/70">
+            {match.matchDate}
           </span>
           {match.stadium && (
-            <span className="text-[8px] text-muted-foreground/60 truncate max-w-[120px]">
+            <span className="text-[8px] text-muted-foreground/50 truncate max-w-[140px]">
               🏟 {match.stadium}
             </span>
           )}
