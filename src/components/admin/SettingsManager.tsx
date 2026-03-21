@@ -151,47 +151,49 @@ const SettingsManager = () => {
 
         {/* Provider selector */}
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">API Provider</label>
+          <label className="text-xs text-muted-foreground mb-1 block">Active API Provider</label>
           <select
             value={form.footballApiProvider}
             onChange={(e) => setForm({ ...form, footballApiProvider: e.target.value as ApiProvider })}
             className={inputCls}
           >
-            <option value="apifootball">apifootball.com (More leagues)</option>
-            <option value="footballdata">football-data.org (Free tier)</option>
+            <option value="apifootball">🟢 apifootball.com (More leagues)</option>
+            <option value="footballdata">🔵 football-data.org (Free tier)</option>
           </select>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
             {form.footballApiProvider === "apifootball"
-              ? "apifootball.com — EPL, La Liga, Serie A, Bundesliga, Ligue 1, Saudi Pro, MLS, UCL, UEL, UECL, Nations League"
-              : "football-data.org — EPL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, Euro, World Cup (free tier)"}
+              ? "✅ Active: apifootball.com — EPL, La Liga, Serie A, Bundesliga, Ligue 1, Saudi Pro, MLS, UCL, UEL, UECL, Nations League"
+              : "✅ Active: football-data.org — EPL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, Euro, World Cup (free tier)"}
           </p>
         </div>
 
-        {/* apifootball.com key */}
-        {form.footballApiProvider === "apifootball" && (
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">apifootball.com API Key</label>
-            <input
-              value={form.footballApiKey}
-              onChange={(e) => setForm({ ...form, footballApiKey: e.target.value })}
-              className={inputCls}
-              placeholder="Enter apifootball.com API key"
-            />
-          </div>
-        )}
+        {/* apifootball.com key - always visible */}
+        <div className={`p-3 rounded-lg border ${form.footballApiProvider === "apifootball" ? "border-primary/50 bg-primary/5" : "border-border/30 bg-secondary/30"}`}>
+          <label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+            {form.footballApiProvider === "apifootball" && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+            apifootball.com API Key
+          </label>
+          <input
+            value={form.footballApiKey}
+            onChange={(e) => setForm({ ...form, footballApiKey: e.target.value })}
+            className={inputCls}
+            placeholder="Enter apifootball.com API key"
+          />
+        </div>
 
-        {/* football-data.org key */}
-        {form.footballApiProvider === "footballdata" && (
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">football-data.org API Key</label>
-            <input
-              value={form.footballdataApiKey}
-              onChange={(e) => setForm({ ...form, footballdataApiKey: e.target.value })}
-              className={inputCls}
-              placeholder="Enter football-data.org API key"
-            />
-          </div>
-        )}
+        {/* football-data.org key - always visible */}
+        <div className={`p-3 rounded-lg border ${form.footballApiProvider === "footballdata" ? "border-primary/50 bg-primary/5" : "border-border/30 bg-secondary/30"}`}>
+          <label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+            {form.footballApiProvider === "footballdata" && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+            football-data.org API Key
+          </label>
+          <input
+            value={form.footballdataApiKey}
+            onChange={(e) => setForm({ ...form, footballdataApiKey: e.target.value })}
+            className={inputCls}
+            placeholder="Enter football-data.org API key"
+          />
+        </div>
 
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">API Calls Per Hour (Max)</label>
