@@ -327,6 +327,9 @@ const LiveEventManager = () => {
                         {match.isLive && <span className="text-[9px] text-destructive font-bold animate-pulse">🔴 LIVE {match.matchStatus}'</span>}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => toggleMatchVisibility(match.id)} className="p-1 rounded hover:bg-secondary text-muted-foreground" title="Hide match">
+                          <EyeOff className="w-3 h-3" />
+                        </button>
                         {imported && (
                           <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-bold">
                             {hasStream ? "✅ Ready" : "⚠️ No Stream"}
