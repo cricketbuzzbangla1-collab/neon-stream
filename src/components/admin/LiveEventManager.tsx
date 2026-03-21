@@ -227,20 +227,30 @@ const LiveEventManager = () => {
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-border pb-2">
+      <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab("api")}
-          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors ${
+          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors whitespace-nowrap ${
             activeTab === "api"
               ? "bg-primary/15 text-primary border-b-2 border-primary"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          ⚽ API Matches ({activeApiMatches.length})
+          ⚽ API Matches ({activeApiMatches.filter(m => !hiddenMatches.has(m.id)).length})
+        </button>
+        <button
+          onClick={() => setActiveTab("leagues")}
+          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors whitespace-nowrap ${
+            activeTab === "leagues"
+              ? "bg-primary/15 text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          🏆 Leagues ({Object.keys(ALLOWED_LEAGUES).length - disabledLeagues.length}/{Object.keys(ALLOWED_LEAGUES).length})
         </button>
         <button
           onClick={() => setActiveTab("manual")}
-          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors ${
+          className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-colors whitespace-nowrap ${
             activeTab === "manual"
               ? "bg-primary/15 text-primary border-b-2 border-primary"
               : "text-muted-foreground hover:text-foreground"
@@ -249,6 +259,40 @@ const LiveEventManager = () => {
           📋 Live Events ({events.length})
         </button>
       </div>
+
+      {/* ===== LEAGUES TAB ===== */}
+      {activeTab === "leagues" && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3">
+            <Zap className="w-4 h-4 text-primary shrink-0" />
+            <span>লীগ ON/OFF করুন। বন্ধ করা লীগের ম্যাচ Homepage-এ দেখাবে না।</span>
+          </div>
+          <div className="space-y-2">
+            {Object.entries(ALLOWED_LEAGUES).map(([id, info]) => {
+              const isEnabled = !disabledLeagues.includes(id);
+              return (
+                <div key={id} className={`glass-card p-3 flex items-center justify-between gap-3 ${isEnabled ? "ring-1 ring-primary/20" : "opacity-60"}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground">{info.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{info.country} • ID: {id}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleLeague(id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      isEnabled
+                        ? "bg-primary/15 text-primary hover:bg-primary/25"
+                        : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                    }`}
+                  >
+                    {isEnabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    {isEnabled ? "ON" : "OFF"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ===== API MATCHES TAB ===== */}
       {activeTab === "api" && (
