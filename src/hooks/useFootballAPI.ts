@@ -152,10 +152,17 @@ function parseApifootballMatch(m: any): FootballMatch {
   };
 }
 
-function mapFDStatus(status: string): { displayStatus: string; isLive: boolean } {
+function calcLiveMinute(startTimestamp: number): string {
+  const elapsed = Math.floor((Date.now() - startTimestamp) / 60000);
+  if (elapsed <= 0) return "1";
+  if (elapsed > 120) return "90+";
+  return String(elapsed);
+}
+
+function mapFDStatus(status: string, startTimestamp: number): { displayStatus: string; isLive: boolean } {
   switch (status) {
     case "IN_PLAY":
-      return { displayStatus: "LIVE", isLive: true };
+      return { displayStatus: calcLiveMinute(startTimestamp), isLive: true };
     case "HALFTIME":
     case "PAUSED":
       return { displayStatus: "HT", isLive: true };
