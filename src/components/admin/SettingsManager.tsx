@@ -17,6 +17,7 @@ const SettingsManager = () => {
     adsEnabled: false,
     footballApiKey: "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
     footballApiEnabled: true,
+    footballApiCallsPerHour: 3,
   });
   const [loading, setLoading] = useState(true);
 
@@ -36,6 +37,7 @@ const SettingsManager = () => {
           adsEnabled: data.adsEnabled || false,
           footballApiKey: data.footballApiKey || "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
           footballApiEnabled: data.footballApiEnabled !== false,
+          footballApiCallsPerHour: data.footballApiCallsPerHour || 3,
         });
       }
       setLoading(false);
@@ -57,6 +59,7 @@ const SettingsManager = () => {
         adsEnabled: form.adsEnabled,
         footballApiKey: form.footballApiKey,
         footballApiEnabled: form.footballApiEnabled,
+        footballApiCallsPerHour: form.footballApiCallsPerHour,
         updatedAt: Date.now(),
       };
       await setDoc(doc(db, "appSettings", "main"), payload, { merge: true });
@@ -148,6 +151,20 @@ const SettingsManager = () => {
           />
           <p className="text-[10px] text-muted-foreground/60 mt-1">
             Get your key from apifootball.com — auto-fetches live & upcoming matches
+          </p>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">API Calls Per Hour (Max)</label>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={form.footballApiCallsPerHour}
+            onChange={(e) => setForm({ ...form, footballApiCallsPerHour: Math.max(1, Math.min(10, parseInt(e.target.value) || 3)) })}
+            className={inputCls}
+          />
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            প্রতি ঘণ্টায় সর্বোচ্চ কতবার API call হবে (ডিফল্ট: 3, সর্বোচ্চ: 10)
           </p>
         </div>
       </div>

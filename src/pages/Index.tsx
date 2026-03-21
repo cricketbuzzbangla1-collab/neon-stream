@@ -5,12 +5,15 @@ import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
 import NoticeBar from "@/components/NoticeBar";
 import EmptyState from "@/components/EmptyState";
-import { Trophy, CalendarClock } from "lucide-react";
+import { Trophy, CalendarClock, ChevronDown } from "lucide-react";
+
+const INITIAL_UPCOMING_COUNT = 10;
 
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const { liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
   const [, setTick] = useState(0);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => setTick(n => n + 1), 1000);
@@ -22,7 +25,6 @@ const Index = () => {
     return getEventStatus(e) !== "finished";
   });
 
-  // Live manual events — stream links first, then by startTime
   const liveNowEvents = activeEvents
     .filter(e => getEventStatus(e) === "live")
     .sort((a, b) => {
@@ -32,18 +34,21 @@ const Index = () => {
       return a.startTime - b.startTime;
     });
 
-  // Upcoming manual events — soonest first
   const upcomingEvents = activeEvents
     .filter(e => getEventStatus(e) === "upcoming")
     .sort((a, b) => a.startTime - b.startTime);
 
-  // API matches sorted by soonest
   const sortedLiveMatches = footballEnabled
     ? [...liveMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
     : [];
   const sortedUpcomingMatches = footballEnabled
     ? [...upcomingMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
     : [];
+
+  const displayedUpcoming = showAllUpcoming
+    ? sortedUpcomingMatches
+    : sortedUpcomingMatches.slice(0, INITIAL_UPCOMING_COUNT);
+  const hasMoreUpcoming = sortedUpcomingMatches.length > INITIAL_UPCOMING_COUNT;
 
   const hasManualEvents = liveNowEvents.length > 0 || upcomingEvents.length > 0;
   const hasFootball = footballEnabled && (sortedLiveMatches.length > 0 || sortedUpcomingMatches.length > 0);
@@ -115,12 +120,32 @@ const Index = () => {
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 <CalendarClock className="w-4 h-4 text-primary" />
                 Upcoming Matches
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  ({sortedUpcomingMatches.length})
+                </span>
               </h2>
               <div className="flex flex-col gap-2">
-                {sortedUpcomingMatches.slice(0, 30).map(m => (
+                {displayedUpcoming.map(m => (
                   <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
                 ))}
               </div>
+              {hasMoreUpcoming && !showAllUpcoming && (
+                <button
+                  onClick={() => setShowAllUpcoming(true)}
+                  className="w-full mt-3 py-2.5 rounded-xl bg-secondary/80 hover:bg-secondary border border-border/50 text-sm font-medium text-foreground flex items-center justify-center gap-2 transition-all duration-300"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  See More ({sortedUpcomingMatches.length - INITIAL_UPCOMING_COUNT} more)
+                </button>
+              )}
+              {showAllUpcoming && sortedUpcomingMatches.length > INITIAL_UPCOMING_COUNT && (
+                <button
+                  onClick={() => setShowAllUpcoming(false)}
+                  className="w-full mt-3 py-2.5 rounded-xl bg-secondary/80 hover:bg-secondary border border-border/50 text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 transition-all duration-300"
+                >
+                  Show Less
+                </button>
+              )}
             </section>
           )}
         </div>
