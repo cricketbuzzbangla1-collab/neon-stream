@@ -22,7 +22,16 @@ const Index = () => {
     return getEventStatus(e) !== "finished";
   });
 
-  const liveNowEvents = activeEvents.filter(e => getEventStatus(e) === "live");
+  // Live events with stream links show first
+  const liveNowEvents = activeEvents
+    .filter(e => getEventStatus(e) === "live")
+    .sort((a, b) => {
+      const aHas = a.streamUrl ? 1 : 0;
+      const bHas = b.streamUrl ? 1 : 0;
+      return bHas - aHas;
+    });
+
+  // Upcoming sorted by soonest first
   const upcomingEvents = activeEvents
     .filter(e => getEventStatus(e) === "upcoming")
     .sort((a, b) => a.startTime - b.startTime);
