@@ -150,7 +150,7 @@ const SettingsManager = () => {
             placeholder="Enter apifootball.com API key"
           />
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            Get your key from apifootball.com — auto-fetches live & upcoming matches
+            Get your key from football-data.org — auto-fetches live & upcoming matches
           </p>
         </div>
         <div>
