@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  doc, onSnapshot, getDoc, setDoc, updateDoc, collection, getDocs,
-} from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export interface FootballMatch {
@@ -31,11 +29,43 @@ const MAJOR_LEAGUE_IDS = new Set([
   "152", "175", "207", "302", "168", "3", "4", "683", "346", "727", "10",
 ]);
 
-// --- Rate Limiting Config ---
+// --- Rate Limiting (localStorage) ---
 const MAX_CALLS_PER_DAY = 48;
-const UPCOMING_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
-const LIVE_INTERVAL = 10 * 60 * 1000; // 10 minutes
-const NO_LIVE_INTERVAL = 30 * 60 * 1000; // 30 min when no live matches
+const RATE_KEY = "football_api_rate";
+
+function getRateInfo(): { count: number; date: string } {
+  try {
+    const raw = localStorage.getItem(RATE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.date === getToday()) return parsed;
+    }
+  } catch {}
+  return { count: 0, date: getToday() };
+}
+
+function incrementRate(): boolean {
+  const info = getRateInfo();
+  if (info.count >= MAX_CALLS_PER_DAY) return false;
+  const updated = { count: info.count + 1, date: getToday() };
+  localStorage.setItem(RATE_KEY, JSON.stringify(updated));
+  return true;
+}
+
+// --- Smart Cache ---
+interface MatchCache {
+  data: FootballMatch[];
+  ts: number;
+  hasLive: boolean;
+}
+
+let matchCache: MatchCache | null = null;
+
+// Dynamic TTL: shorter when live matches exist
+function getCacheTTL(): number {
+  if (matchCache?.hasLive) return 10 * 60 * 1000; // 10 min for live
+  return 30 * 60 * 1000; // 30 min no live
+}
 
 function parseMatch(m: any): FootballMatch {
   return {
@@ -69,143 +99,12 @@ function getTomorrow(): string {
   return d.toISOString().split("T")[0];
 }
 
-function getTodayKey(): string {
-  return getToday().replace(/-/g, "");
-}
-
-// --- Firestore Cache Layer ---
-
-const CACHE_DOC = "footballCache/matches";
-const RATE_DOC_PREFIX = "footballCache/rateLimit_";
-
-async function getRateLimit(): Promise<{ count: number; date: string }> {
-  const key = getTodayKey();
-  const ref = doc(db, `${RATE_DOC_PREFIX}${key}`);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    return snap.data() as { count: number; date: string };
-  }
-  return { count: 0, date: getToday() };
-}
-
-async function incrementRateLimit(): Promise<boolean> {
-  const key = getTodayKey();
-  const ref = doc(db, `${RATE_DOC_PREFIX}${key}`);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    const data = snap.data();
-    if ((data.count || 0) >= MAX_CALLS_PER_DAY) return false;
-    await updateDoc(ref, { count: (data.count || 0) + 1 });
-  } else {
-    await setDoc(ref, { count: 1, date: getToday() });
-  }
-  return true;
-}
-
-interface CachedData {
-  matches: any[];
-  lastFetchUpcoming: number;
-  lastFetchLive: number;
-  hasLiveMatches: boolean;
-  updatedAt: number;
-}
-
-async function getCachedMatches(): Promise<CachedData | null> {
-  try {
-    const ref = doc(db, CACHE_DOC);
-    const snap = await getDoc(ref);
-    if (snap.exists()) return snap.data() as CachedData;
-  } catch (e) {
-    console.warn("Cache read error:", e);
-  }
-  return null;
-}
-
-async function setCachedMatches(data: Partial<CachedData>) {
-  try {
-    const ref = doc(db, CACHE_DOC);
-    await setDoc(ref, { ...data, updatedAt: Date.now() }, { merge: true });
-  } catch (e) {
-    console.warn("Cache write error:", e);
-  }
-}
-
-// --- Smart Fetch Logic ---
-
-async function smartFetchMatches(apiKey: string): Promise<FootballMatch[] | null> {
-  const cached = await getCachedMatches();
-  const now = Date.now();
-
-  // Determine if we need to fetch
-  const needsUpcoming = !cached || (now - (cached.lastFetchUpcoming || 0)) > UPCOMING_INTERVAL;
-  const hasLive = cached?.hasLiveMatches || false;
-  const liveInterval = hasLive ? LIVE_INTERVAL : NO_LIVE_INTERVAL;
-  const needsLive = !cached || (now - (cached.lastFetchLive || 0)) > liveInterval;
-
-  if (!needsUpcoming && !needsLive && cached?.matches) {
-    // Return cached data - no API call needed
-    return cached.matches.map(parseMatch);
-  }
-
-  // Check rate limit before calling API
-  const rateLimit = await getRateLimit();
-  if (rateLimit.count >= MAX_CALLS_PER_DAY) {
-    console.warn(`⚠️ Football API: Daily limit reached (${rateLimit.count}/${MAX_CALLS_PER_DAY})`);
-    // Return cached even if stale
-    if (cached?.matches) return cached.matches.map(parseMatch);
-    return null;
-  }
-
-  try {
-    const today = getToday();
-    const tomorrow = getTomorrow();
-    const leagueIds = [...MAJOR_LEAGUE_IDS].join(",");
-
-    const url = `${API_BASE}?action=get_events&from=${today}&to=${tomorrow}&league_id=${leagueIds}&APIkey=${apiKey}`;
-
-    const allowed = await incrementRateLimit();
-    if (!allowed) {
-      console.warn("⚠️ Rate limit exceeded, using cache");
-      if (cached?.matches) return cached.matches.map(parseMatch);
-      return null;
-    }
-
-    const res = await fetch(url);
-    const json = await res.json();
-
-    if (Array.isArray(json)) {
-      const liveExists = json.some((m: any) => m.match_live === "1");
-
-      // Store raw data in Firestore cache
-      await setCachedMatches({
-        matches: json,
-        lastFetchUpcoming: now,
-        lastFetchLive: now,
-        hasLiveMatches: liveExists,
-      });
-
-      return json
-        .map(parseMatch)
-        .filter(m => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
-    }
-
-    return [];
-  } catch (err) {
-    console.error("Football API error:", err);
-    if (cached?.matches) return cached.matches.map(parseMatch);
-    return null;
-  }
-}
-
-// --- React Hook ---
-
 export function useFootballMatches() {
-  const [matches, setMatches] = useState<FootballMatch[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [matches, setMatches] = useState<FootballMatch[]>(matchCache?.data || []);
+  const [loading, setLoading] = useState(!matchCache);
   const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
   const [enabled, setEnabled] = useState(true);
 
-  // Listen to settings for API key / toggle
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "appSettings", "main"), (snap) => {
       if (snap.exists()) {
@@ -224,24 +123,71 @@ export function useFootballMatches() {
       return;
     }
 
-    const result = await smartFetchMatches(apiKey);
-    if (result) {
-      const filtered = result.filter(
-        m => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET"
-      );
-      filtered.sort((a, b) => {
-        if (a.isLive && !b.isLive) return -1;
-        if (!a.isLive && b.isLive) return 1;
-        return `${a.matchDate} ${a.matchTime}`.localeCompare(`${b.matchDate} ${b.matchTime}`);
-      });
-      setMatches(filtered);
+    // Check cache freshness
+    if (matchCache && Date.now() - matchCache.ts < getCacheTTL()) {
+      setMatches(matchCache.data);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    // Check daily rate limit
+    const rateInfo = getRateInfo();
+    if (rateInfo.count >= MAX_CALLS_PER_DAY) {
+      console.warn(`⚠️ Football API: Daily limit reached (${rateInfo.count}/${MAX_CALLS_PER_DAY})`);
+      if (matchCache) {
+        setMatches(matchCache.data);
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Increment rate counter
+    if (!incrementRate()) {
+      if (matchCache) setMatches(matchCache.data);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const today = getToday();
+      const tomorrow = getTomorrow();
+      const leagueIds = [...MAJOR_LEAGUE_IDS].join(",");
+
+      const url = `${API_BASE}?action=get_events&from=${today}&to=${tomorrow}&league_id=${leagueIds}&APIkey=${apiKey}`;
+      const res = await fetch(url);
+      const json = await res.json();
+
+      if (Array.isArray(json)) {
+        const parsed = json
+          .map(parseMatch)
+          .filter(m => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
+
+        parsed.sort((a, b) => {
+          if (a.isLive && !b.isLive) return -1;
+          if (!a.isLive && b.isLive) return 1;
+          return `${a.matchDate} ${a.matchTime}`.localeCompare(`${b.matchDate} ${b.matchTime}`);
+        });
+
+        const hasLive = parsed.some(m => m.isLive);
+        matchCache = { data: parsed, ts: Date.now(), hasLive };
+        setMatches(parsed);
+
+        console.log(`⚽ Football API: Fetched ${parsed.length} matches (${getRateInfo().count}/${MAX_CALLS_PER_DAY} calls today, ${hasLive ? "LIVE detected → 10min refresh" : "no live → 30min refresh"})`);
+      } else {
+        matchCache = { data: [], ts: Date.now(), hasLive: false };
+        setMatches([]);
+      }
+    } catch (err) {
+      console.error("Football API error:", err);
+      if (matchCache) setMatches(matchCache.data);
+    } finally {
+      setLoading(false);
+    }
   }, [apiKey, enabled]);
 
   useEffect(() => {
     fetchMatches();
-    // Smart interval: check every 5 min, actual API calls governed by cache timestamps
+    // Check every 5 min; actual API calls governed by cache TTL + rate limit
     const interval = setInterval(fetchMatches, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchMatches]);
