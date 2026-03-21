@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
 import { FootballMatch } from "@/hooks/useFootballAPI";
-import { LiveEvent } from "@/hooks/useFirestore";
-import { Flame, Play } from "lucide-react";
+import { LiveEvent, addDocument } from "@/hooks/useFirestore";
+import { Flame, Play, Clock, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface Props {
   match: FootballMatch;
@@ -10,8 +13,16 @@ interface Props {
 
 const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isLive = match.isLive;
   const hasScore = match.homeScore || match.awayScore;
+  const [now, setNow] = useState(Date.now());
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const matchingEvent = liveEvents.find(ev => {
     const evA = (typeof ev.teamA === "object" ? (ev.teamA as any)?.name : String(ev.teamA || "")).toLowerCase();
@@ -22,11 +33,67 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
       && evA.length > 2 && evB.length > 2;
   });
 
+  // Countdown for upcoming matches
+  const getCountdown = () => {
+    if (isLive || hasScore) return null;
+    // Parse match date and time
+    const [year, month, day] = match.matchDate.split("-").map(Number);
+    const [hour, minute] = match.matchTime.split(":").map(Number);
+    const matchTs = new Date(year, month - 1, day, hour, minute).getTime();
+    const diff = matchTs - now;
+    if (diff <= 0) return null;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const countdown = getCountdown();
+
   const handleClick = () => {
     if (matchingEvent) {
       navigate(`/watch/event-${matchingEvent.id}`);
     }
   };
+
+  // Auto-import match as LiveEvent
+  const handleImport = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (importing) return;
+    setImporting(true);
+    try {
+      const [year, month, day] = match.matchDate.split("-").map(Number);
+      const [hour, minute] = match.matchTime.split(":").map(Number);
+      const startTime = new Date(year, month - 1, day, hour, minute).getTime();
+      const endTime = startTime + 2 * 3600000; // 2 hours default
+
+      await addDocument("liveEvents", {
+        title: `${match.homeTeam} vs ${match.awayTeam}`,
+        teamA: match.homeTeam,
+        teamALogo: match.homeLogo,
+        teamB: match.awayTeam,
+        teamBLogo: match.awayLogo,
+        streamUrl: "",
+        playerType: "hls",
+        startTime,
+        endTime,
+        countryId: "",
+        isFeatured: true,
+        isActive: true,
+        manualStatus: "",
+        league: match.league,
+        leagueLogo: match.leagueLogo,
+      });
+      toast.success(`${match.homeTeam} vs ${match.awayTeam} added to Live Events!`);
+    } catch {
+      toast.error("Failed to import");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const isAdmin = user?.role === "admin";
 
   const leagueColors: Record<string, string> = {
     "Premier League": "from-purple-600/20 to-purple-900/10",
@@ -51,32 +118,36 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
           : "ring-1 ring-border/20 shadow-sm"
       }`}
     >
-      {/* Gradient background */}
       <div className={`absolute inset-0 bg-gradient-to-br ${gradientClass}`} />
       <div className="absolute inset-0 bg-card/80 backdrop-blur-sm" />
 
-      {/* Live pulse bar */}
       {isLive && (
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
       )}
 
-      {/* Watch badge */}
-      {matchingEvent && (
-        <div className="absolute top-2 right-2 z-10">
+      {/* Top-right badges */}
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+        {/* Admin import button */}
+        {isAdmin && !matchingEvent && (
+          <button
+            onClick={handleImport}
+            disabled={importing}
+            className="bg-primary text-primary-foreground px-2 py-1 text-[8px] font-bold rounded-full flex items-center gap-0.5 shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            <Plus className="w-2.5 h-2.5" /> {importing ? "..." : "Add"}
+          </button>
+        )}
+        {matchingEvent && (
           <div className="bg-primary text-primary-foreground px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 shadow-lg shadow-primary/20">
             <Play className="w-2.5 h-2.5 fill-current" /> Watch
           </div>
-        </div>
-      )}
-
-      {/* Live badge */}
-      {isLive && !matchingEvent && (
-        <div className="absolute top-2 right-2 z-10">
+        )}
+        {isLive && !matchingEvent && (
           <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
             <Flame className="w-2.5 h-2.5" /> Live
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="relative z-[1] px-4 py-3">
         {/* League header */}
@@ -96,7 +167,6 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
 
         {/* Teams */}
         <div className="flex items-center">
-          {/* Home team */}
           <div className="flex-1 flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
               {match.homeLogo ? (
@@ -108,7 +178,7 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
             <span className="text-xs font-bold text-foreground truncate">{match.homeTeam}</span>
           </div>
 
-          {/* Score / VS */}
+          {/* Score / VS / Countdown */}
           <div className="flex flex-col items-center shrink-0 mx-3 min-w-[48px]">
             {hasScore ? (
               <div className={`px-3 py-1 rounded-lg ${isLive ? "bg-destructive/15" : "bg-secondary/60"}`}>
@@ -121,9 +191,15 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
                 <span className="text-[10px] font-black text-muted-foreground">{match.matchTime}</span>
               </div>
             )}
+            {/* Countdown */}
+            {countdown && (
+              <div className="mt-1 flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-full">
+                <Clock className="w-2.5 h-2.5 text-primary" />
+                <span className="text-[9px] font-mono font-bold text-primary tabular-nums">{countdown}</span>
+              </div>
+            )}
           </div>
 
-          {/* Away team */}
           <div className="flex-1 flex items-center gap-2.5 min-w-0 justify-end">
             <span className="text-xs font-bold text-foreground truncate text-right">{match.awayTeam}</span>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/60 border border-border/30 shrink-0">
