@@ -75,6 +75,10 @@ function getRateInfo(): { count: number; hour: string } {
   return { count: 0, hour: getCurrentHour() };
 }
 
+function resetRateLimit(): void {
+  localStorage.removeItem(RATE_KEY);
+}
+
 function incrementRate(maxPerHour: number): boolean {
   const info = getRateInfo();
   if (info.count >= maxPerHour) return false;
