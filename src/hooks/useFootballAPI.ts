@@ -190,7 +190,7 @@ function parseFootballdataMatch(m: any): FootballMatch {
   const d = new Date(utcDate);
   const matchDate = utcDate.split("T")[0] || "";
   const matchTime = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-  const { displayStatus, isLive } = mapFDStatus(m.status || "", startTimestamp);
+  const { displayStatus, isLive } = mapFDStatus(m.status || "", startTimestamp, m.minute);
   const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? "";
   const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? "";
 
