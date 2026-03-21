@@ -23,18 +23,37 @@ export interface FootballMatch {
   startTimestamp: number;
 }
 
-const API_BASE = "https://api.football-data.org/v4";
+// ===== apifootball.com =====
+const APIFOOTBALL_BASE = "https://apiv3.apifootball.com/";
+const DEFAULT_APIFOOTBALL_KEY = "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7";
 
-// football-data.org competition codes (free tier)
-export const ALLOWED_LEAGUES: Record<string, { name: string; country: string; code: string }> = {
-  "PL":  { name: "Premier League", country: "England", code: "PL" },
-  "PD":  { name: "La Liga", country: "Spain", code: "PD" },
-  "SA":  { name: "Serie A", country: "Italy", code: "SA" },
-  "BL1": { name: "Bundesliga", country: "Germany", code: "BL1" },
-  "FL1": { name: "Ligue 1", country: "France", code: "FL1" },
-  "CL":  { name: "UEFA Champions League", country: "Europe", code: "CL" },
-  "EC":  { name: "European Championship", country: "Europe", code: "EC" },
-  "WC":  { name: "FIFA World Cup", country: "World", code: "WC" },
+export const ALLOWED_LEAGUES: Record<string, { name: string; country: string }> = {
+  "152": { name: "Premier League", country: "England" },
+  "302": { name: "La Liga", country: "Spain" },
+  "207": { name: "Serie A", country: "Italy" },
+  "175": { name: "Bundesliga", country: "Germany" },
+  "168": { name: "Ligue 1", country: "France" },
+  "278": { name: "Saudi Pro League", country: "Saudi Arabia" },
+  "332": { name: "Major League Soccer", country: "USA" },
+  "3":   { name: "UEFA Champions League", country: "Europe" },
+  "4":   { name: "UEFA Europa League", country: "Europe" },
+  "683": { name: "UEFA Europa Conference League", country: "Europe" },
+  "10":  { name: "UEFA Nations League", country: "Europe" },
+};
+
+// ===== football-data.org =====
+const FOOTBALLDATA_BASE = "https://api.football-data.org/v4";
+const DEFAULT_FOOTBALLDATA_KEY = "e4df9b4f6d364f2d9950728666d9a897";
+
+export const FOOTBALLDATA_LEAGUES: Record<string, { name: string; country: string }> = {
+  "PL":  { name: "Premier League", country: "England" },
+  "PD":  { name: "La Liga", country: "Spain" },
+  "SA":  { name: "Serie A", country: "Italy" },
+  "BL1": { name: "Bundesliga", country: "Germany" },
+  "FL1": { name: "Ligue 1", country: "France" },
+  "CL":  { name: "UEFA Champions League", country: "Europe" },
+  "EC":  { name: "European Championship", country: "Europe" },
+  "WC":  { name: "FIFA World Cup", country: "World" },
 };
 
 // --- Rate Limiting ---
@@ -64,57 +83,75 @@ function incrementRate(maxPerHour: number): boolean {
 }
 
 // --- Cache ---
-interface MatchCache {
-  data: FootballMatch[];
-  ts: number;
-  hasLive: boolean;
-}
-
+interface MatchCache { data: FootballMatch[]; ts: number; hasLive: boolean; }
 let matchCache: MatchCache | null = null;
 
 function getCacheTTL(): number {
-  if (matchCache?.hasLive) return 10 * 60 * 1000;
-  return 30 * 60 * 1000;
+  return matchCache?.hasLive ? 10 * 60 * 1000 : 30 * 60 * 1000;
 }
 
-// Map football-data.org status to display status
-function mapStatus(status: string): { displayStatus: string; isLive: boolean } {
+function getToday(): string { return new Date().toISOString().split("T")[0]; }
+function getTomorrow(): string {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+}
+
+export function getMinutesUntilStart(startTs: number): number {
+  return (startTs - Date.now()) / 60000;
+}
+
+// ===== apifootball.com parser =====
+function parseApifootballMatch(m: any): FootballMatch {
+  const matchDate = m.match_date || "";
+  const matchTime = m.match_time || "";
+  const [year, month, day] = matchDate.split("-").map(Number);
+  const [hour, minute] = matchTime.split(":").map(Number);
+  const startTimestamp = new Date(year, month - 1, day, hour, minute).getTime();
+  return {
+    id: m.match_id,
+    homeTeam: m.match_hometeam_name || "",
+    awayTeam: m.match_awayteam_name || "",
+    homeLogo: m.team_home_badge || "",
+    awayLogo: m.team_away_badge || "",
+    homeScore: m.match_hometeam_score || "",
+    awayScore: m.match_awayteam_score || "",
+    matchTime, matchDate,
+    matchStatus: m.match_status || "",
+    isLive: m.match_live === "1",
+    league: m.league_name || "",
+    leagueId: m.league_id || "",
+    leagueLogo: m.league_logo || "",
+    country: m.country_name || "",
+    stadium: m.match_stadium || "",
+    round: m.match_round || "",
+    startTimestamp,
+  };
+}
+
+// ===== football-data.org parser =====
+function mapFDStatus(status: string): { displayStatus: string; isLive: boolean } {
   switch (status) {
-    case "IN_PLAY":
-    case "HALFTIME":
-    case "EXTRA_TIME":
-    case "PENALTY_SHOOTOUT":
-      return { displayStatus: status === "HALFTIME" ? "HT" : status === "IN_PLAY" ? "LIVE" : status, isLive: true };
-    case "PAUSED":
-      return { displayStatus: "HT", isLive: true };
-    case "FINISHED":
-    case "AWARDED":
-      return { displayStatus: "Finished", isLive: false };
-    case "TIMED":
-    case "SCHEDULED":
-      return { displayStatus: "", isLive: false };
-    case "POSTPONED":
-      return { displayStatus: "Postponed", isLive: false };
-    case "CANCELLED":
-      return { displayStatus: "Cancelled", isLive: false };
-    case "SUSPENDED":
-      return { displayStatus: "Suspended", isLive: false };
-    default:
-      return { displayStatus: "", isLive: false };
+    case "IN_PLAY": return { displayStatus: "LIVE", isLive: true };
+    case "HALFTIME": case "PAUSED": return { displayStatus: "HT", isLive: true };
+    case "EXTRA_TIME": return { displayStatus: "EXTRA_TIME", isLive: true };
+    case "PENALTY_SHOOTOUT": return { displayStatus: "PENALTY_SHOOTOUT", isLive: true };
+    case "FINISHED": case "AWARDED": return { displayStatus: "Finished", isLive: false };
+    case "POSTPONED": return { displayStatus: "Postponed", isLive: false };
+    case "CANCELLED": return { displayStatus: "Cancelled", isLive: false };
+    case "SUSPENDED": return { displayStatus: "Suspended", isLive: false };
+    default: return { displayStatus: "", isLive: false };
   }
 }
 
-function parseMatch(m: any): FootballMatch {
+function parseFootballdataMatch(m: any): FootballMatch {
   const utcDate = m.utcDate || "";
   const startTs = new Date(utcDate).getTime();
-  const matchDate = utcDate.split("T")[0] || "";
   const d = new Date(utcDate);
+  const matchDate = utcDate.split("T")[0] || "";
   const matchTime = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-
-  const { displayStatus, isLive } = mapStatus(m.status || "");
+  const { displayStatus, isLive } = mapFDStatus(m.status || "");
   const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? "";
   const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? "";
-
   return {
     id: String(m.id),
     homeTeam: m.homeTeam?.shortName || m.homeTeam?.name || "",
@@ -123,8 +160,7 @@ function parseMatch(m: any): FootballMatch {
     awayLogo: m.awayTeam?.crest || "",
     homeScore: homeScore !== null && homeScore !== "" ? String(homeScore) : "",
     awayScore: awayScore !== null && awayScore !== "" ? String(awayScore) : "",
-    matchTime,
-    matchDate,
+    matchTime, matchDate,
     matchStatus: displayStatus,
     isLive,
     league: m.competition?.name || "",
@@ -137,25 +173,44 @@ function parseMatch(m: any): FootballMatch {
   };
 }
 
-function getToday(): string {
-  return new Date().toISOString().split("T")[0];
+// ===== Fetch functions =====
+async function fetchFromApifootball(apiKey: string): Promise<FootballMatch[]> {
+  const today = getToday();
+  const tomorrow = getTomorrow();
+  const leagueIds = Object.keys(ALLOWED_LEAGUES).join(",");
+  const url = `${APIFOOTBALL_BASE}?action=get_events&from=${today}&to=${tomorrow}&league_id=${leagueIds}&APIkey=${apiKey}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!Array.isArray(json)) return [];
+  return json.map(parseApifootballMatch)
+    .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET");
 }
 
-function getTomorrow(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0];
+async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
+  const today = getToday();
+  const tomorrow = getTomorrow();
+  const url = `${FOOTBALLDATA_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
+  const res = await fetch(url, { headers: { "X-Auth-Token": apiKey } });
+  if (!res.ok) { console.error(`football-data.org error: ${res.status}`); return []; }
+  const json = await res.json();
+  if (!json.matches || !Array.isArray(json.matches)) return [];
+  const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
+  return json.matches
+    .filter((m: any) => allowedCodes.includes(m.competition?.code))
+    .map(parseFootballdataMatch)
+    .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
 }
 
-export function getMinutesUntilStart(startTs: number): number {
-  return (startTs - Date.now()) / 60000;
-}
+// ===== Hook =====
+export type ApiProvider = "apifootball" | "footballdata";
 
 export function useFootballMatches() {
   const [matches, setMatches] = useState<FootballMatch[]>(matchCache?.data || []);
   const [loading, setLoading] = useState(!matchCache);
-  const [apiKey, setApiKey] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>(DEFAULT_APIFOOTBALL_KEY);
+  const [footballdataKey, setFootballdataKey] = useState<string>(DEFAULT_FOOTBALLDATA_KEY);
   const [enabled, setEnabled] = useState(true);
+  const [apiProvider, setApiProvider] = useState<ApiProvider>("apifootball");
   const [disabledLeagues, setDisabledLeagues] = useState<string[]>([]);
   const [maxCallsPerHour, setMaxCallsPerHour] = useState(3);
 
@@ -164,8 +219,10 @@ export function useFootballMatches() {
       if (snap.exists()) {
         const data = snap.data();
         if (data.footballApiKey) setApiKey(data.footballApiKey);
+        if (data.footballdataApiKey) setFootballdataKey(data.footballdataApiKey);
         if (data.footballApiEnabled === false) setEnabled(false);
         else setEnabled(true);
+        if (data.footballApiProvider) setApiProvider(data.footballApiProvider);
         if (Array.isArray(data.disabledLeagues)) setDisabledLeagues(data.disabledLeagues);
         else setDisabledLeagues([]);
         if (typeof data.footballApiCallsPerHour === "number") setMaxCallsPerHour(data.footballApiCallsPerHour);
@@ -175,81 +232,54 @@ export function useFootballMatches() {
   }, []);
 
   const fetchMatches = useCallback(async () => {
-    if (!enabled || !apiKey) {
-      setLoading(false);
-      return;
-    }
+    if (!enabled) { setLoading(false); return; }
+
+    const activeKey = apiProvider === "footballdata" ? footballdataKey : apiKey;
+    if (!activeKey) { setLoading(false); return; }
 
     if (matchCache && Date.now() - matchCache.ts < getCacheTTL()) {
-      setMatches(matchCache.data);
-      setLoading(false);
-      return;
+      setMatches(matchCache.data); setLoading(false); return;
     }
 
-    const rateInfo = getRateInfo();
-    if (rateInfo.count >= maxCallsPerHour) {
-      console.warn(`⚠️ Football API: Hourly limit reached (${rateInfo.count}/${maxCallsPerHour})`);
+    if (getRateInfo().count >= maxCallsPerHour) {
+      console.warn(`⚠️ Football API: Hourly limit reached`);
       if (matchCache) setMatches(matchCache.data);
-      setLoading(false);
-      return;
+      setLoading(false); return;
     }
 
     if (!incrementRate(maxCallsPerHour)) {
       if (matchCache) setMatches(matchCache.data);
-      setLoading(false);
-      return;
+      setLoading(false); return;
     }
 
     try {
-      const today = getToday();
-      const tomorrow = getTomorrow();
+      let parsed: FootballMatch[];
+      if (apiProvider === "footballdata") {
+        parsed = await fetchFromFootballdata(footballdataKey);
+      } else {
+        parsed = await fetchFromApifootball(apiKey);
+      }
 
-      const url = `${API_BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
-      const res = await fetch(url, {
-        headers: { "X-Auth-Token": apiKey },
+      parsed.sort((a, b) => {
+        if (a.isLive && !b.isLive) return -1;
+        if (!a.isLive && b.isLive) return 1;
+        return a.startTimestamp - b.startTimestamp;
       });
 
-      if (!res.ok) {
-        console.error(`Football API error: ${res.status} ${res.statusText}`);
-        if (matchCache) setMatches(matchCache.data);
-        setLoading(false);
-        return;
-      }
-
-      const json = await res.json();
-
-      if (json.matches && Array.isArray(json.matches)) {
-        // Filter only allowed competitions
-        const allowedCodes = Object.keys(ALLOWED_LEAGUES);
-        const parsed = json.matches
-          .filter((m: any) => allowedCodes.includes(m.competition?.code))
-          .map(parseMatch)
-          .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
-
-        parsed.sort((a: FootballMatch, b: FootballMatch) => {
-          if (a.isLive && !b.isLive) return -1;
-          if (!a.isLive && b.isLive) return 1;
-          return a.startTimestamp - b.startTimestamp;
-        });
-
-        const hasLive = parsed.some((m: FootballMatch) => m.isLive);
-        matchCache = { data: parsed, ts: Date.now(), hasLive };
-        setMatches(parsed);
-
-        console.log(`⚽ Football API (football-data.org): Fetched ${parsed.length} matches (${getRateInfo().count}/${maxCallsPerHour} calls this hour)`);
-      } else {
-        matchCache = { data: [], ts: Date.now(), hasLive: false };
-        setMatches([]);
-      }
+      const hasLive = parsed.some(m => m.isLive);
+      matchCache = { data: parsed, ts: Date.now(), hasLive };
+      setMatches(parsed);
+      console.log(`⚽ ${apiProvider}: Fetched ${parsed.length} matches (${getRateInfo().count}/${maxCallsPerHour} calls/hr)`);
     } catch (err) {
       console.error("Football API error:", err);
       if (matchCache) setMatches(matchCache.data);
     } finally {
       setLoading(false);
     }
-  }, [apiKey, enabled, maxCallsPerHour]);
+  }, [apiKey, footballdataKey, enabled, maxCallsPerHour, apiProvider]);
 
   useEffect(() => {
+    matchCache = null; // reset cache on provider change
     fetchMatches();
     const intervalMs = Math.max(5 * 60 * 1000, Math.floor(60 * 60 * 1000 / Math.max(maxCallsPerHour, 1)));
     const interval = setInterval(fetchMatches, intervalMs);
@@ -257,11 +287,10 @@ export function useFootballMatches() {
   }, [fetchMatches, maxCallsPerHour]);
 
   const filteredMatches = matches.filter(m => !disabledLeagues.includes(m.leagueId));
-
   const liveMatches = filteredMatches.filter(m => m.isLive);
   const upcomingMatches = filteredMatches
     .filter(m => !m.isLive && !m.matchStatus)
     .sort((a, b) => a.startTimestamp - b.startTimestamp);
 
-  return { matches: filteredMatches, liveMatches, upcomingMatches, loading, enabled, disabledLeagues };
+  return { matches: filteredMatches, liveMatches, upcomingMatches, loading, enabled, disabledLeagues, apiProvider };
 }
