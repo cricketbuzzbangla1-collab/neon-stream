@@ -268,7 +268,7 @@ const LiveEventManager = () => {
             <span>লীগ ON/OFF করুন। বন্ধ করা লীগের ম্যাচ Homepage-এ দেখাবে না।</span>
           </div>
           <div className="space-y-2">
-            {Object.entries(ALLOWED_LEAGUES).map(([id, info]) => {
+            {Object.entries(apiProvider === "footballdata" ? FOOTBALLDATA_LEAGUES : ALLOWED_LEAGUES).map(([id, info]) => {
               const isEnabled = !disabledLeagues.includes(id);
               return (
                 <div key={id} className={`glass-card p-3 flex items-center justify-between gap-3 ${isEnabled ? "ring-1 ring-primary/20" : "opacity-60"}`}>
