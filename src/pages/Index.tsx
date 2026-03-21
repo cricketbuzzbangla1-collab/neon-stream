@@ -123,7 +123,7 @@ const Index = () => {
               </h2>
               <div className="flex flex-col gap-2">
                 {sortedLiveMatches.slice(0, 20).map(m => (
-                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} />
+                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
                 ))}
               </div>
             </section>
