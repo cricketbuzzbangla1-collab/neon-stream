@@ -15,7 +15,7 @@ const SettingsManager = () => {
     noticeLink: "",
     defaultTheme: "dark-neon",
     adsEnabled: false,
-    footballApiKey: "10144b1b1c0934e60629f08a37064aec805f0a3b4fa6488a654ff791ef86aac7",
+    footballApiKey: "e4df9b4f6d364f2d9950728666d9a897",
     footballApiEnabled: true,
     footballApiCallsPerHour: 3,
   });
