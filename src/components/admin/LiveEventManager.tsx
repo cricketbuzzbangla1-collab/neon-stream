@@ -160,7 +160,7 @@ const LiveEventManager = () => {
 
   // Filter API matches
   const activeApiMatches = apiMatches.filter(m =>
-    m.matchStatus !== "Finished" && m.matchStatus !== "After Pens." && m.matchStatus !== "After ET"
+    m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed"
   );
 
   const handleSave = async () => {
