@@ -24,17 +24,8 @@ const FootballMatchCard = ({ match, liveEvents = [] }: Props) => {
     return () => clearInterval(t);
   }, []);
 
-  // Auto-calculate live minute from startTimestamp
-  const getLiveMinute = (): string => {
-    if (!isLive) return "";
-    const elapsed = Math.floor((now - match.startTimestamp) / 60000);
-    if (elapsed <= 0) return "1";
-    if (elapsed <= 45) return String(elapsed);
-    if (elapsed <= 60) return "45+"; // HT buffer
-    if (elapsed <= 105) return String(elapsed - 15); // 2nd half: subtract 15min HT
-    return "90+";
-  };
-  const liveMinute = getLiveMinute();
+  // Use real match minute from API (matchStatus contains minute like "45+", "67", "HT")
+  const liveMinute = isLive && match.matchStatus ? match.matchStatus : "";
 
   const matchingEvent = liveEvents.find(ev => {
     const evA = (typeof ev.teamA === "object" ? (ev.teamA as any)?.name : String(ev.teamA || "")).toLowerCase();
