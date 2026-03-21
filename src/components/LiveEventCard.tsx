@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { LiveEvent, useCountries } from "@/hooks/useFirestore";
 import { useNavigate } from "react-router-dom";
 import { Play, Clock, Zap } from "lucide-react";

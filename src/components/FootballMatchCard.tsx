@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FootballMatch, getMinutesUntilStart } from "@/hooks/useFootballAPI";
 import { LiveEvent, addDocument } from "@/hooks/useFirestore";
 import { Flame, Play, Clock, Plus, AlertTriangle } from "lucide-react";
