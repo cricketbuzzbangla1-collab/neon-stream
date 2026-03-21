@@ -45,6 +45,8 @@ const SettingsManager = () => {
           footballApiEnabled: data.footballApiEnabled !== false,
           footballApiCallsPerHour: data.footballApiCallsPerHour || 3,
           footballApiProvider: data.footballApiProvider || "apifootball",
+          tmdbApiKey: data.tmdbApiKey || "ea17f4c1fca3ed86e12ac87d94bf0fbb",
+          tmdbEnabled: data.tmdbEnabled !== false,
         });
       }
       setLoading(false);
