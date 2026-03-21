@@ -267,50 +267,79 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
   try {
     let json: any = null;
 
+    // 1) Vercel serverless proxy (production)
     try {
       const proxyRes = await fetchJsonWithTimeout(proxyUrl);
       if (proxyRes.ok) {
         json = await proxyRes.json();
-        console.log("✅ football-data.org: proxy success");
+        console.log("✅ football-data.org: vercel proxy success");
       }
     } catch {}
 
+    // 2) Direct fetch
     if (!json) {
       try {
         const res = await fetchJsonWithTimeout(targetUrl, {
           headers: { "X-Auth-Token": apiKey },
           mode: "cors",
         });
-
         if (res.ok) {
           json = await res.json();
           console.log("✅ football-data.org: direct success");
-        } else {
-          const errorText = await res.text().catch(() => "");
-          console.warn(`football-data.org direct error ${res.status}: ${errorText}`);
         }
-      } catch (error) {
-        console.warn("football-data.org direct failed", error);
+      } catch (e) {
+        console.warn("football-data.org direct failed", e);
       }
     }
 
+    // 3) thingproxy
     if (!json) {
       try {
-        const proxyRes = await fetchJsonWithTimeout(`https://thingproxy.freeboard.io/fetch/${targetUrl}`, {
+        const res = await fetchJsonWithTimeout(`https://thingproxy.freeboard.io/fetch/${targetUrl}`, {
           headers: { "X-Auth-Token": apiKey },
         });
-        if (proxyRes.ok) {
-          json = await proxyRes.json();
-          console.log("✅ football-data.org: fallback proxy success");
+        if (res.ok) {
+          json = await res.json();
+          console.log("✅ football-data.org: thingproxy success");
         }
-      } catch (error) {
-        console.warn("football-data.org fallback proxy failed", error);
+      } catch (e) {
+        console.warn("football-data.org thingproxy failed", e);
       }
     }
 
+    // 4) corsproxy.io
+    if (!json) {
+      try {
+        const res = await fetchJsonWithTimeout(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
+          headers: { "X-Auth-Token": apiKey },
+        });
+        if (res.ok) {
+          json = await res.json();
+          console.log("✅ football-data.org: corsproxy success");
+        }
+      } catch (e) {
+        console.warn("football-data.org corsproxy failed", e);
+      }
+    }
+
+    // 5) allorigins (wraps response as JSON)
+    if (!json) {
+      try {
+        const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl + `&_token=${apiKey}`)}`;
+        const res = await fetchJsonWithTimeout(allOriginsUrl);
+        if (res.ok) {
+          json = await res.json();
+          console.log("✅ football-data.org: allorigins success");
+        }
+      } catch (e) {
+        console.warn("football-data.org allorigins failed", e);
+      }
+    }
+
+    // 6) Last resort: Use apifootball.com as automatic fallback
     if (!json?.matches || !Array.isArray(json.matches)) {
-      console.warn("football-data.org invalid response", json);
-      return [];
+      console.warn("football-data.org all methods failed, falling back to apifootball.com");
+      return fetchFromApifootball(DEFAULT_APIFOOTBALL_KEY);
     }
 
     const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
@@ -320,7 +349,8 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
       .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
   } catch (err) {
     console.error("football-data.org fetch error:", err);
-    return [];
+    // Ultimate fallback to apifootball
+    return fetchFromApifootball(DEFAULT_APIFOOTBALL_KEY);
   }
 }
 
