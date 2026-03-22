@@ -84,6 +84,60 @@ const AppSettingsManager = () => {
         </button>
       </div>
 
+      {/* Homepage Sections */}
+      <div className="glass-card neon-border p-6 space-y-4 max-w-lg">
+        <h3 className="font-display font-bold text-foreground flex items-center gap-2">
+          <Settings className="w-5 h-5 text-primary" /> Homepage Sections
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Control which sections appear on the homepage to optimize performance.
+        </p>
+        <div className="space-y-1 divide-y divide-border/30">
+          <Toggle
+            label="Show Notice Bar"
+            value={form.sections?.noticeBar?.enabled ?? true}
+            onChange={(v) => setForm({
+              ...form,
+              sections: { ...form.sections!, noticeBar: { ...form.sections?.noticeBar!, enabled: v } }
+            })}
+          />
+          <Toggle
+            label="Show Live Events"
+            value={form.sections?.liveEvents?.enabled ?? true}
+            onChange={(v) => setForm({
+              ...form,
+              sections: { ...form.sections!, liveEvents: { ...form.sections?.liveEvents!, enabled: v } }
+            })}
+          />
+          <Toggle
+            label="Show Football Matches"
+            value={form.sections?.footballMatches?.enabled ?? true}
+            onChange={(v) => setForm({
+              ...form,
+              sections: { ...form.sections!, footballMatches: { ...form.sections?.footballMatches!, enabled: v } }
+            })}
+          />
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-foreground">Football Initial Load Limit</span>
+            <select
+              value={form.sections?.footballMatches?.lazyLoadLimit ?? 5}
+              onChange={(e) => setForm({
+                ...form,
+                sections: { ...form.sections!, footballMatches: { ...form.sections?.footballMatches!, lazyLoadLimit: Number(e.target.value) } }
+              })}
+              className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
+            >
+              {[3, 5, 10, 15, 20, 30].map(n => (
+                <option key={n} value={n}>{n} matches</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all">
+          <Save className="w-4 h-4" /> Save Sections
+        </button>
+      </div>
+
       {/* Auto Stream JSON Section */}
       <div className="glass-card neon-border p-6 space-y-4 max-w-lg">
         <h3 className="font-display font-bold text-foreground flex items-center gap-2">
