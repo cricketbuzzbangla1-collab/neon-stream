@@ -13,7 +13,7 @@ const INITIAL_UPCOMING_COUNT = 10;
 
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
-  const { matches: allMatches, liveMatches, upcomingMatches, recentResults, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
+  const { matches: allMatches, liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
   const { settings } = useAppSettings();
   const [tick, setTick] = useState(Date.now());
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
