@@ -2,6 +2,11 @@ import { useState, useEffect } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+export interface SectionSettings {
+  enabled: boolean;
+  lazyLoadLimit?: number;
+}
+
 export interface AppConfig {
   chatEnabled: boolean;
   postEnabled: boolean;
@@ -10,6 +15,12 @@ export interface AppConfig {
   maintenanceMode: boolean;
   allowGuestWatch: boolean;
   badWordFilterEnabled: boolean;
+  // Section visibility settings
+  sections?: {
+    liveEvents: SectionSettings;
+    footballMatches: SectionSettings;
+    noticeBar: SectionSettings;
+  };
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -20,6 +31,11 @@ const DEFAULT_CONFIG: AppConfig = {
   maintenanceMode: false,
   allowGuestWatch: true,
   badWordFilterEnabled: true,
+  sections: {
+    liveEvents: { enabled: true, lazyLoadLimit: 10 },
+    footballMatches: { enabled: true, lazyLoadLimit: 5 },
+    noticeBar: { enabled: true },
+  },
 };
 
 export function useAppSettings() {
