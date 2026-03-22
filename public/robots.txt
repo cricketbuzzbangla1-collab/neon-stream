@@ -1,14 +1,59 @@
+# SEO-friendly robots.txt for AbcTV LIVE
+# Optimized for fast crawling and indexing
+
+# Default rules for all crawlers
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /*.json$
+Disallow: *.js
+Disallow: *.css
+Disallow: /node_modules/
+Disallow: /dist/
+Crawl-delay: 1
+Request-rate: 30/60
+
+# Google Bot - aggressive crawling allowed
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 0
 
+# Bing Bot
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 1
 
+# Social Media Crawlers
 User-agent: Twitterbot
 Allow: /
 
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
+User-agent: LinkedInBot
 Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+# Block known bad actors
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+# Sitemaps
+Sitemap: https://abctv-live.app/sitemap.xml
+Sitemap: https://abctv-live.app/sitemap-matches.xml
