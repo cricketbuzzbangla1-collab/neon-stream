@@ -8,8 +8,7 @@ import type { SeoSettings } from "@/hooks/useAppSettings";
 const SeoSettingsManager = () => {
   const [form, setForm] = useState<SeoSettings>({
     googleVerificationCode: "",
-    sitemapUrl: "https://abctvlive.vercel.app/sitemap.xml",
-    robotsText: "",
+    sitemapUrl: "https://example.com/sitemap.xml",
   });
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
@@ -20,8 +19,7 @@ const SeoSettingsManager = () => {
         const data = snap.data();
         setForm({
           googleVerificationCode: data.seo?.googleVerificationCode || "",
-          sitemapUrl: data.seo?.sitemapUrl || "https://abctvlive.vercel.app/sitemap.xml",
-          robotsText: data.seo?.robotsText || "",
+          sitemapUrl: data.seo?.sitemapUrl || "https://example.com/sitemap.xml",
         });
       }
       setLoading(false);
@@ -45,7 +43,6 @@ const SeoSettingsManager = () => {
         seo: {
           googleVerificationCode: form.googleVerificationCode.trim(),
           sitemapUrl: form.sitemapUrl.trim(),
-          robotsText: form.robotsText.trim(),
         },
       });
       toast.success("SEO settings saved successfully!");
@@ -63,14 +60,6 @@ const SeoSettingsManager = () => {
   };
 
   const metaTagExample = `<meta name="google-site-verification" content="${form.googleVerificationCode || 'YOUR_CODE'}" />`;
-
-  const robotsTxtExample = `# SEO-friendly robots.txt for AbcTV LIVE
-User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Crawl-delay: 1
-Sitemap: ${form.sitemapUrl || "https://abctvlive.vercel.app/sitemap.xml"}`;
 
   if (loading)
     return (
@@ -145,66 +134,20 @@ Sitemap: ${form.sitemapUrl || "https://abctvlive.vercel.app/sitemap.xml"}`;
         <div className="space-y-2">
           <label className="block text-sm font-medium text-foreground">Sitemap URL</label>
           <p className="text-xs text-muted-foreground mb-2">
-            The full URL of your XML sitemap
+            The full URL of your XML sitemap for Google Search Console
           </p>
           <input
             type="url"
             value={form.sitemapUrl}
             onChange={(e) => setForm({ ...form, sitemapUrl: e.target.value })}
-            placeholder="https://abctvlive.vercel.app/sitemap.xml"
+            placeholder="https://example.com/sitemap.xml"
             className={inputCls}
           />
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-success/10 border border-success/30 rounded-lg">
-          <p className="text-sm text-success font-medium">Sitemap auto-generated dynamically</p>
-          <a
-            href="/sitemap.xml"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs px-3 py-1 rounded bg-success text-white hover:opacity-90 transition-all"
-          >
-            Preview
-          </a>
+        <div className="flex items-center justify-between p-3 bg-blue/10 border border-blue/30 rounded-lg">
+          <p className="text-sm text-blue font-medium">Submit this URL to Google Search Console</p>
         </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-foreground">robots.txt Content</label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Optional: Leave empty for default rules
-          </p>
-          <textarea
-            value={form.robotsText}
-            onChange={(e) => setForm({ ...form, robotsText: e.target.value })}
-            placeholder={robotsTxtExample}
-            className={`${inputCls} min-h-[150px] font-mono text-xs`}
-          />
-        </div>
-
-        {form.robotsText && (
-          <div className="bg-secondary/50 border border-border rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-foreground">robots.txt Preview</p>
-              <button
-                onClick={() => copyToClipboard(form.robotsText, "robots.txt")}
-                className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-primary text-primary-foreground hover:opacity-90 transition-all"
-              >
-                {copied === "robots.txt" ? (
-                  <>
-                    <Check className="w-3 h-3" /> Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3" /> Copy
-                  </>
-                )}
-              </button>
-            </div>
-            <code className="block text-xs bg-background p-2 rounded border border-border overflow-x-auto whitespace-pre-wrap break-words">
-              {form.robotsText}
-            </code>
-          </div>
-        )}
       </div>
 
       {/* Next Steps */}

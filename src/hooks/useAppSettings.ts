@@ -10,7 +10,6 @@ export interface SectionSettings {
 export interface SeoSettings {
   googleVerificationCode?: string;
   sitemapUrl?: string;
-  robotsText?: string;
 }
 
 export interface AppConfig {
