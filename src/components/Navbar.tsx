@@ -7,6 +7,7 @@ import { useState } from "react";
 import AppSidebar from "@/components/AppSidebar";
 
 const themes: { value: ThemeType; label: string; icon: string }[] = [
+  { value: "modern-minimalist", label: "Modern", icon: "✨" },
   { value: "dark-neon", label: "Neon Dark", icon: "🟢" },
   { value: "light", label: "Light", icon: "⚪" },
 ];

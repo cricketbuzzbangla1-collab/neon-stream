@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-export type ThemeType = "dark-neon" | "light";
+export type ThemeType = "modern-minimalist" | "dark-neon" | "dark-blue" | "amoled" | "light";
 
 interface ThemeContextType {
   theme: ThemeType;
@@ -18,13 +18,13 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
-const VALID_THEMES: ThemeType[] = ["dark-neon", "light"];
+const VALID_THEMES: ThemeType[] = ["modern-minimalist", "dark-neon", "dark-blue", "amoled", "light"];
 const isValidTheme = (t: any): t is ThemeType => VALID_THEMES.includes(t);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeType>(() => {
     const stored = localStorage.getItem("ott-theme");
-    return isValidTheme(stored) ? stored : "dark-neon";
+    return isValidTheme(stored) ? stored : "modern-minimalist";
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [adminDefault, setAdminDefault] = useState<ThemeType | null>(null);

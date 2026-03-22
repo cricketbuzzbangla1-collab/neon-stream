@@ -5,8 +5,62 @@
 @tailwind utilities;
 
 @layer base {
+  /* ===== Modern Minimalist — Clean & Refined ===== */
+  :root, [data-theme="modern-minimalist"] {
+    --background: 0 0% 97%;
+    --foreground: 217 32% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 32% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 32% 17%;
+    --primary: 172 66% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 13% 91%;
+    --secondary-foreground: 217 32% 17%;
+    --muted: 220 13% 91%;
+    --muted-foreground: 217 8% 48%;
+    --accent: 164 75% 44%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
+    --ring: 172 66% 50%;
+    --radius: 0.5rem;
+    --glow-primary: 172 66% 50%;
+    --glow-accent: 164 75% 44%;
+    --surface-glass: 0 0% 100%;
+    --live-badge: 0 84% 60%;
+    --neon-green: 164 75% 44%;
+    /* Theme-specific */
+    --live-glow: 0 84% 60%;
+    --card-hover-glow: 172 66% 50%;
+    --notice-info-bg: 209 89% 96%;
+    --notice-info-border: 172 66% 50%;
+    --notice-warn-bg: 35 100% 93%;
+    --notice-warn-border: 35 100% 55%;
+    --notice-success-bg: 164 75% 94%;
+    --notice-success-border: 164 75% 44%;
+    --glass-opacity: 0.95;
+    --glass-blur: 8px;
+    --card-gradient-from: 0 0% 100%;
+    --card-gradient-to: 220 20% 98%;
+    --nav-glass: 0 0% 99%;
+    --scrollbar-thumb-hover: 172 66% 50%;
+    /* Sidebar */
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 217 32% 17%;
+    --sidebar-primary: 172 66% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 13% 91%;
+    --sidebar-accent-foreground: 217 32% 17%;
+    --sidebar-border: 220 13% 89%;
+    --sidebar-ring: 172 66% 50%;
+    font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  }
+
   /* ===== Dark Neon — Cyberpunk / Esports ===== */
-  :root, [data-theme="dark-neon"] {
+  [data-theme="dark-neon"] {
     --background: 225 25% 6%;
     --foreground: 210 40% 96%;
     --card: 225 25% 9%;
@@ -26,13 +80,11 @@
     --border: 225 15% 18%;
     --input: 225 15% 18%;
     --ring: 184 100% 50%;
-    --radius: 0.75rem;
     --glow-primary: 184 100% 50%;
     --glow-accent: 320 100% 60%;
     --surface-glass: 225 25% 12%;
     --live-badge: 0 100% 55%;
     --neon-green: 150 100% 50%;
-    /* Theme-specific */
     --live-glow: 0 100% 55%;
     --card-hover-glow: 184 100% 50%;
     --notice-info-bg: 210 80% 15%;
@@ -47,7 +99,6 @@
     --card-gradient-to: 230 30% 12%;
     --nav-glass: 225 25% 8%;
     --scrollbar-thumb-hover: 184 100% 50%;
-    /* Sidebar */
     --sidebar-background: 225 25% 8%;
     --sidebar-foreground: 210 40% 96%;
     --sidebar-primary: 184 100% 50%;
