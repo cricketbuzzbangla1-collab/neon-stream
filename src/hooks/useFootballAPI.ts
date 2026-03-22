@@ -203,9 +203,10 @@ function mapFDStatus(status: string, startTimestamp: number, minute?: number): {
 function parseFootballdataMatch(m: any): FootballMatch {
   const utcDate = m.utcDate || "";
   const startTimestamp = new Date(utcDate).getTime();
-  const d = new Date(utcDate);
-  const matchDate = utcDate.split("T")[0] || "";
-  const matchTime = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+  // Convert to local time for display (fixes DST offset issues)
+  const localDate = new Date(startTimestamp);
+  const matchDate = `${localDate.getFullYear()}-${(localDate.getMonth() + 1).toString().padStart(2, "0")}-${localDate.getDate().toString().padStart(2, "0")}`;
+  const matchTime = `${localDate.getHours().toString().padStart(2, "0")}:${localDate.getMinutes().toString().padStart(2, "0")}`;
   const { displayStatus, isLive } = mapFDStatus(m.status || "", startTimestamp, m.minute);
   const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? "";
   const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? "";
