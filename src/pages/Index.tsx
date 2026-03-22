@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLiveEvents, updateDocument } from "@/hooks/useFirestore";
 import { useFootballMatches } from "@/hooks/useFootballAPI";
+import { useAutoStreamMatcher } from "@/hooks/useAutoStreamMatcher";
 import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
 import NoticeBar from "@/components/NoticeBar";
@@ -11,9 +12,12 @@ const INITIAL_UPCOMING_COUNT = 10;
 
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
-  const { liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
+  const { matches: allMatches, liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
   const [tick, setTick] = useState(Date.now());
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+
+  // Auto-stream matcher — links JSON streams to API matches
+  useAutoStreamMatcher(allMatches, liveEvents);
 
   const cleanedRef = useRef<Set<string>>(new Set());
 
