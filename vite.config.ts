@@ -19,6 +19,15 @@ export default defineConfig(({ mode }) => ({
     },
   },
 
+  optimizeDeps: {
+    include: ["firebase"],
+    exclude: ["firebase/app", "firebase/auth", "firebase/firestore"],
+  },
+
+  ssr: {
+    noExternal: ["firebase"],
+  },
+
   server: {
     host: true,
     port: 8080,
