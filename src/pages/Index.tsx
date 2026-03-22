@@ -136,35 +136,38 @@ const Index = () => {
           {/* ⚽ Football API — Upcoming Matches */}
           {sortedUpcomingMatches.length > 0 && (
             <section className="container">
-              <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
-                <CalendarClock className="w-4 h-4 text-primary" />
-                Upcoming Matches
-                <span className="text-xs font-normal text-muted-foreground ml-1">
-                  ({sortedUpcomingMatches.length})
-                </span>
-              </h2>
-              <div className="flex flex-col gap-2">
-                {displayedUpcoming.map(m => (
-                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
-                ))}
+              <div className="neon-border rounded-xl p-4">
+                <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 text-primary" />
+                  Upcoming Matches
+                  <span className="text-xs font-normal text-muted-foreground ml-1">
+                    ({sortedUpcomingMatches.length})
+                  </span>
+                </h2>
+                <div className="flex flex-col gap-2">
+                  {displayedUpcoming.map(m => (
+                    <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
+                  ))}
+                </div>
               </div>
-              {hasMoreUpcoming && !showAllUpcoming && (
-                <button
-                  onClick={() => setShowAllUpcoming(true)}
-                  className="w-full mt-3 py-2.5 rounded-xl bg-secondary/80 hover:bg-secondary border border-border/50 text-sm font-medium text-foreground flex items-center justify-center gap-2 transition-all duration-300"
-                >
-                  <ChevronDown className="w-4 h-4" />
-                  See More ({sortedUpcomingMatches.length - INITIAL_UPCOMING_COUNT} more)
-                </button>
-              )}
-              {showAllUpcoming && sortedUpcomingMatches.length > INITIAL_UPCOMING_COUNT && (
-                <button
-                  onClick={() => setShowAllUpcoming(false)}
-                  className="w-full mt-3 py-2.5 rounded-xl bg-secondary/80 hover:bg-secondary border border-border/50 text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 transition-all duration-300"
-                >
-                  Show Less
-                </button>
-              )}
+                {hasMoreUpcoming && !showAllUpcoming && (
+                  <button
+                    onClick={() => setShowAllUpcoming(true)}
+                    className="w-full mt-3 py-2.5 rounded-xl bg-secondary/80 hover:bg-secondary border border-border/50 text-sm font-medium text-foreground flex items-center justify-center gap-2 transition-all duration-300"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                    See More ({sortedUpcomingMatches.length - INITIAL_UPCOMING_COUNT} more)
+                  </button>
+                )}
+                {showAllUpcoming && sortedUpcomingMatches.length > INITIAL_UPCOMING_COUNT && (
+                  <button
+                    onClick={() => setShowAllUpcoming(false)}
+                    className="w-full mt-3 py-2.5 rounded-xl bg-secondary/80 hover:bg-secondary border border-border/50 text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 transition-all duration-300"
+                  >
+                    Show Less
+                  </button>
+                )}
+              </div>
             </section>
           )}
         </div>
