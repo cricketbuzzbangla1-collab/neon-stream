@@ -16,6 +16,8 @@ export interface FootballMatch {
   matchDate: string;
   matchStatus: string;
   isLive: boolean;
+  isFinished: boolean;
+  finishedAt?: number;
   league: string;
   leagueId: string;
   leagueLogo: string;
@@ -142,6 +144,9 @@ function parseApifootballMatch(m: any): FootballMatch {
   const localTime = `${localDate.getHours().toString().padStart(2, "0")}:${localDate.getMinutes().toString().padStart(2, "0")}`;
   const localDateStr = `${localDate.getFullYear()}-${(localDate.getMonth() + 1).toString().padStart(2, "0")}-${localDate.getDate().toString().padStart(2, "0")}`;
 
+  const status = (m.match_status || "").toLowerCase();
+  const isFinished = status === "finished" || status === "ft" || status === "after pens." || status === "after et" || status === "cancelled" || status === "postponed" || status === "awarded";
+
   return {
     id: String(m.match_id || ""),
     homeTeam: m.match_hometeam_name || "",
@@ -154,6 +159,8 @@ function parseApifootballMatch(m: any): FootballMatch {
     matchDate: localDateStr,
     matchStatus: m.match_status || "",
     isLive: m.match_live === "1",
+    isFinished,
+    finishedAt: isFinished ? Date.now() : undefined,
     league: m.league_name || "",
     leagueId: String(m.league_id || ""),
     leagueLogo: m.league_logo || "",
@@ -211,6 +218,8 @@ function parseFootballdataMatch(m: any): FootballMatch {
   const homeScore = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? "";
   const awayScore = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? "";
 
+  const isFinished = m.status === "FINISHED" || m.status === "AWARDED" || m.status === "CANCELLED" || m.status === "POSTPONED";
+
   return {
     id: String(m.id),
     homeTeam: m.homeTeam?.shortName || m.homeTeam?.name || "",
@@ -223,6 +232,8 @@ function parseFootballdataMatch(m: any): FootballMatch {
     matchDate,
     matchStatus: displayStatus,
     isLive,
+    isFinished,
+    finishedAt: isFinished ? Date.now() : undefined,
     league: m.competition?.name || "",
     leagueId: m.competition?.code || "",
     leagueLogo: m.competition?.emblem || "",
@@ -267,11 +278,7 @@ async function fetchFromApifootball(apiKey: string): Promise<FootballMatch[]> {
 
     return json
       .map(parseApifootballMatch)
-      .filter((m: FootballMatch) => Object.prototype.hasOwnProperty.call(ALLOWED_LEAGUES, m.leagueId))
-      .filter((m: FootballMatch) => {
-        const s = m.matchStatus?.toLowerCase();
-        return s !== "finished" && s !== "ft" && s !== "after pens." && s !== "after et" && s !== "cancelled" && s !== "postponed" && s !== "awarded";
-      });
+      .filter((m: FootballMatch) => Object.prototype.hasOwnProperty.call(ALLOWED_LEAGUES, m.leagueId));
   } catch (err) {
     console.error("apifootball.com fetch error:", err);
     return [];
@@ -365,8 +372,7 @@ async function fetchFromFootballdata(apiKey: string): Promise<FootballMatch[]> {
     const allowedCodes = Object.keys(FOOTBALLDATA_LEAGUES);
     return json.matches
       .filter((m: any) => allowedCodes.includes(m.competition?.code))
-      .map(parseFootballdataMatch)
-      .filter((m: FootballMatch) => m.matchStatus !== "Finished" && m.matchStatus !== "Cancelled" && m.matchStatus !== "Postponed");
+      .map(parseFootballdataMatch);
   } catch (err) {
     console.error("football-data.org fetch error:", err);
     // Ultimate fallback to apifootball
@@ -484,16 +490,54 @@ export function useFootballMatches() {
     return () => clearInterval(interval);
   }, [apiProvider, maxCallsPerHour, fetchMatches]);
 
-  const filteredMatches = matches.filter((m) => !disabledLeagues.includes(m.leagueId));
-  const liveMatches = filteredMatches.filter((m) => m.isLive);
-  const upcomingMatches = filteredMatches
-    .filter((m) => !m.isLive && !m.matchStatus)
+  // De-duplicate matches using Map to prevent duplicates from API merging
+  const deduplicateMatches = (ms: FootballMatch[]): FootballMatch[] => {
+    const matchMap = new Map<string, FootballMatch>();
+    
+    for (const m of ms) {
+      const key = m.id;
+      
+      if (!matchMap.has(key)) {
+        matchMap.set(key, m);
+      } else {
+        // If we have a duplicate, keep the one with more complete data
+        const existing = matchMap.get(key)!;
+        if (m.homeScore && !existing.homeScore) {
+          matchMap.set(key, m);
+        }
+      }
+    }
+    
+    return Array.from(matchMap.values());
+  };
+
+  const deduplicatedMatches = deduplicateMatches(matches);
+  const filteredMatches = deduplicatedMatches.filter((m) => !disabledLeagues.includes(m.leagueId));
+  
+  // Finished matches stay visible for 15 minutes (900000ms), then removed
+  const FINISHED_VISIBLE_DURATION = 15 * 60 * 1000;
+  
+  const visibleMatches = filteredMatches.filter((m) => {
+    if (m.isFinished && m.finishedAt) {
+      return Date.now() - m.finishedAt <= FINISHED_VISIBLE_DURATION;
+    }
+    return true;
+  });
+  
+  const liveMatches = visibleMatches.filter((m) => m.isLive && !m.isFinished);
+  const upcomingMatches = visibleMatches
+    .filter((m) => !m.isLive && !m.isFinished)
     .sort((a, b) => a.startTimestamp - b.startTimestamp);
+  
+  const recentResults = visibleMatches
+    .filter((m) => m.isFinished)
+    .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
 
   return {
-    matches: filteredMatches,
+    matches: visibleMatches,
     liveMatches,
     upcomingMatches,
+    recentResults,
     loading,
     enabled,
     disabledLeagues,
