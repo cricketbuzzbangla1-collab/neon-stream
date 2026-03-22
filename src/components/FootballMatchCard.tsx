@@ -119,133 +119,30 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
 
   const gradientClass = leagueColors[match.league] || "from-primary/10 to-card";
 
-  // --- UPCOMING CARD (new premium design) ---
-  if (!isLive) {
-    return (
-      <div
-        onClick={handleClick}
-        className={`relative w-full rounded-2xl overflow-hidden transition-all duration-300 ${
-          matchingEvent ? "cursor-pointer active:scale-[0.98]" : ""
-        } ${
-          isKickoffImminent
-            ? "ring-2 ring-destructive/60 shadow-lg shadow-destructive/20 animate-pulse"
-            : isStartingSoon
-            ? "ring-1 ring-yellow-500/40 shadow-md shadow-yellow-500/10"
-            : "ring-1 ring-border/10 shadow-sm hover:shadow-md hover:ring-border/30"
-        }`}
-      >
-        {/* Background layers */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${gradientClass}`} />
-        <div className="absolute inset-0 bg-card/85 backdrop-blur-sm" />
-
-        {isKickoffImminent && (
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse" />
-        )}
-
-        {/* Top-right badges */}
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-          {isAdmin && !matchingEvent && (
-            <button
-              onClick={handleImport}
-              disabled={importing}
-              className="bg-primary text-primary-foreground px-2 py-1 text-[8px] font-bold rounded-full flex items-center gap-0.5 shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              <Plus className="w-2.5 h-2.5" /> {importing ? "..." : "Add"}
-            </button>
-          )}
-          {matchingEvent && (
-            <div className="bg-primary text-primary-foreground px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 shadow-lg shadow-primary/20">
-              <Play className="w-2.5 h-2.5 fill-current" /> Watch
-            </div>
-          )}
-          {isKickoffImminent && (
-            <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 animate-pulse">
-              <AlertTriangle className="w-2.5 h-2.5" /> Kickoff!
-            </div>
-          )}
-          {isStartingSoon && !isKickoffImminent && (
-            <div className="bg-yellow-500 text-black px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
-              🔥 Soon
-            </div>
-          )}
-        </div>
-
-        <div className="relative z-[1] px-3 py-2.5">
-          {/* League header */}
-          <div className="flex items-center gap-1.5 mb-2">
-            {match.leagueLogo && (
-              <img src={match.leagueLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-sm" loading="lazy" />
-            )}
-            <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider truncate">
-              {match.league}
-            </span>
-          </div>
-
-          {/* Teams row with VS center */}
-          <div className="flex items-center gap-1">
-            {/* Home team */}
-            <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/50 border border-border/20 shrink-0">
-                {match.homeLogo ? (
-                  <img src={match.homeLogo} alt={match.homeTeam} className="w-6 h-6 object-contain" loading="lazy" />
-                ) : (
-                  <span className="text-xs font-bold text-muted-foreground">{match.homeTeam.charAt(0)}</span>
-                )}
-              </div>
-              <span className="text-[9px] font-bold text-foreground truncate text-center w-full leading-tight">{match.homeTeam}</span>
-            </div>
-
-            {/* Center: Time + Countdown */}
-            <div className="flex flex-col items-center shrink-0 mx-1 min-w-[56px]">
-              <div className="bg-secondary/60 border border-border/30 px-3 py-1.5 rounded-xl mb-1">
-                <span className="text-sm font-black tabular-nums text-foreground tracking-wide">
-                  {match.matchTime}
-                </span>
-              </div>
-              {countdown && (
-                <div className={`flex items-center gap-1 ${getCountdownBg()} border ${minutesUntil <= 10 ? "border-destructive/30" : minutesUntil <= 30 ? "border-yellow-500/30" : "border-primary/20"} px-2 py-0.5 rounded-full`}>
-                  <Clock className={`w-2.5 h-2.5 ${getCountdownColor()}`} />
-                  <span className={`text-[9px] font-mono font-bold tabular-nums ${getCountdownColor()}`}>{countdown}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Away team */}
-            <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden bg-secondary/50 border border-border/20 shrink-0">
-                {match.awayLogo ? (
-                  <img src={match.awayLogo} alt={match.awayTeam} className="w-6 h-6 object-contain" loading="lazy" />
-                ) : (
-                  <span className="text-xs font-bold text-muted-foreground">{match.awayTeam.charAt(0)}</span>
-                )}
-              </div>
-              <span className="text-[9px] font-bold text-foreground truncate text-center w-full leading-tight">{match.awayTeam}</span>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/10">
-            <span className="text-[8px] text-muted-foreground/60">{match.matchDate}</span>
-            {match.stadium && (
-              <span className="text-[7px] text-muted-foreground/40 truncate max-w-[120px]">🏟 {match.stadium}</span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- LIVE CARD (existing design) ---
   return (
     <div
       onClick={handleClick}
       className={`relative w-full rounded-2xl overflow-hidden transition-all duration-300 ${
         matchingEvent ? "cursor-pointer active:scale-[0.98]" : ""
-      } ring-1 ring-destructive/40 shadow-lg shadow-destructive/10`}
+      } ${
+        isKickoffImminent
+          ? "ring-2 ring-destructive/60 shadow-lg shadow-destructive/20 animate-pulse"
+          : isLive
+          ? "ring-1 ring-destructive/40 shadow-lg shadow-destructive/10"
+          : isStartingSoon
+          ? "ring-1 ring-yellow-500/40 shadow-md shadow-yellow-500/10"
+          : "ring-1 ring-border/20 shadow-sm"
+      }`}
     >
       <div className={`absolute inset-0 bg-gradient-to-br ${gradientClass}`} />
       <div className="absolute inset-0 bg-card/80 backdrop-blur-sm" />
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
+
+      {isLive && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
+      )}
+      {isKickoffImminent && !isLive && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse" />
+      )}
 
       {/* Top-right badges */}
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
@@ -263,7 +160,17 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
             <Play className="w-2.5 h-2.5 fill-current" /> Watch
           </div>
         )}
-        {!matchingEvent && (
+        {isKickoffImminent && !isLive && (
+          <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 animate-pulse">
+            <AlertTriangle className="w-2.5 h-2.5" /> Kickoff!
+          </div>
+        )}
+        {isStartingSoon && !isKickoffImminent && !isLive && (
+          <div className="bg-yellow-500 text-black px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
+            🔥 Soon
+          </div>
+        )}
+        {isLive && !matchingEvent && (
           <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
             <Flame className="w-2.5 h-2.5" /> Live
           </div>
@@ -294,20 +201,38 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
             <span className="text-[10px] font-bold text-foreground truncate leading-tight">{match.homeTeam}</span>
           </div>
 
-          {/* Center: Score + Live Minute */}
+          {/* Center: Score + Live Minute / Match Time */}
           <div className="flex flex-col items-center shrink-0 mx-2 min-w-[50px]">
-            <div className="flex items-center gap-1 bg-destructive/20 border border-destructive/40 px-1.5 py-0.5 rounded-full mb-0.5">
-              <span className="w-1 h-1 rounded-full bg-destructive animate-pulse" />
-              <span className="text-[8px] font-mono font-black tabular-nums text-destructive">
-                {liveMinute ? `${liveMinute}'` : "LIVE"}
-              </span>
-            </div>
-            {hasScore && (
-              <div className="bg-destructive/15 border border-destructive/30 px-2.5 py-1 rounded-lg">
-                <span className="text-base font-black tabular-nums tracking-widest text-destructive">
-                  {match.homeScore} - {match.awayScore}
-                </span>
-              </div>
+            {isLive ? (
+              <>
+                <div className="flex items-center gap-1 bg-destructive/20 border border-destructive/40 px-1.5 py-0.5 rounded-full mb-0.5">
+                  <span className="w-1 h-1 rounded-full bg-destructive animate-pulse" />
+                  <span className="text-[8px] font-mono font-black tabular-nums text-destructive">
+                    {liveMinute ? `${liveMinute}'` : "LIVE"}
+                  </span>
+                </div>
+                {hasScore && (
+                  <div className="bg-destructive/15 border border-destructive/30 px-2.5 py-1 rounded-lg">
+                    <span className="text-base font-black tabular-nums tracking-widest text-destructive">
+                      {match.homeScore} - {match.awayScore}
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="bg-secondary/80 border border-border/40 px-2.5 py-1 rounded-lg">
+                  <span className="text-xs font-black tabular-nums text-foreground tracking-wide">
+                    {match.matchTime}
+                  </span>
+                </div>
+                {countdown && (
+                  <div className={`mt-1 flex items-center gap-0.5 ${getCountdownBg()} border ${minutesUntil <= 10 ? "border-destructive/30" : minutesUntil <= 30 ? "border-yellow-500/30" : "border-primary/20"} px-1.5 py-0.5 rounded-full`}>
+                    <Clock className={`w-2 h-2 ${getCountdownColor()}`} />
+                    <span className={`text-[8px] font-mono font-bold tabular-nums ${getCountdownColor()}`}>{countdown}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -325,9 +250,13 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-border/10">
-          <span className="text-[8px] text-muted-foreground/70">{match.matchDate}</span>
+          <span className="text-[8px] text-muted-foreground/70">
+            {match.matchDate}
+          </span>
           {match.stadium && (
-            <span className="text-[7px] text-muted-foreground/50 truncate max-w-[120px]">🏟 {match.stadium}</span>
+            <span className="text-[7px] text-muted-foreground/50 truncate max-w-[120px]">
+              🏟 {match.stadium}
+            </span>
           )}
         </div>
       </div>
