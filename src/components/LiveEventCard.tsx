@@ -71,99 +71,99 @@ const LiveEventCard = ({ event, now: externalNow }: { event: LiveEvent; now?: nu
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent animate-pulse" />
       )}
 
-      {isFeatured && (
-        <div className="absolute top-2 left-2 z-10">
-          <div className="bg-primary text-primary-foreground px-2 py-0.5 text-[7px] font-bold uppercase tracking-widest rounded-full flex items-center gap-1 shadow-md">
-            <Zap className="w-2.5 h-2.5 fill-current" /> Featured
-          </div>
+      {/* Top badges row - above content to avoid overlap */}
+      <div className="relative z-10 flex items-center justify-between px-3 pt-2.5">
+        <div>
+          {isFeatured && (
+            <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-0.5 text-[7px] font-bold uppercase tracking-widest rounded-full shadow-md">
+              <Zap className="w-2 h-2 fill-current" /> Featured
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Status badge */}
-      <div className="absolute top-2 right-2 z-10">
-        {isLive ? (
-          <div className="bg-destructive text-destructive-foreground px-2.5 py-1 text-[8px] font-black uppercase tracking-wider rounded-full flex items-center gap-1 shadow-lg shadow-destructive/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-            ON AIR
-          </div>
-        ) : countdown ? (
-          <div className="bg-primary/15 text-primary px-2.5 py-1 text-[8px] font-bold rounded-full flex items-center gap-1 border border-primary/20">
-            <Clock className="w-2.5 h-2.5" />
-            {countdown.short}
-          </div>
-        ) : (
-          <div className="bg-secondary text-muted-foreground px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
-            <Clock className="w-2.5 h-2.5" /> Soon
-          </div>
-        )}
+        <div>
+          {isLive ? (
+            <span className="inline-flex items-center gap-1 bg-destructive text-destructive-foreground px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-full shadow-lg shadow-destructive/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+              ON AIR
+            </span>
+          ) : countdown ? (
+            <span className="inline-flex items-center gap-1 bg-primary/15 text-primary px-2.5 py-0.5 text-[8px] font-bold rounded-full border border-primary/20">
+              <Clock className="w-2.5 h-2.5" />
+              {countdown.short}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 bg-secondary text-muted-foreground px-2.5 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full">
+              <Clock className="w-2.5 h-2.5" /> Soon
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="relative z-[1] px-4 py-3.5">
+      <div className="relative z-[1] px-3 pb-2.5 pt-1.5">
         {country && (
-          <div className="flex items-center gap-1.5 mb-3">
+          <div className="flex items-center gap-1.5 mb-2">
             <span className="text-sm">{country.flag}</span>
-            <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{country.name}</span>
+            <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">{country.name}</span>
           </div>
         )}
 
         {/* Teams row */}
         <div className="flex items-center">
-          <div className="flex-1 flex items-center gap-2.5 min-w-0">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden border-2 shrink-0 bg-secondary/50 ${
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden border shrink-0 bg-secondary/50 ${
               isLive ? "border-destructive/30" : "border-border/30"
             }`}>
               {teamALogo ? (
-                <img src={teamALogo} alt={teamAName} className="w-9 h-9 object-contain" loading="lazy" />
+                <img src={teamALogo} alt={teamAName} className="w-7 h-7 object-contain" loading="lazy" />
               ) : (
-                <span className="text-base font-bold text-muted-foreground">{teamAName.charAt(0)}</span>
+                <span className="text-sm font-bold text-muted-foreground">{teamAName.charAt(0)}</span>
               )}
             </div>
-            <span className="text-xs font-bold text-foreground truncate leading-tight">{teamAName}</span>
+            <span className="text-[10px] font-bold text-foreground truncate leading-tight">{teamAName}</span>
           </div>
 
           {/* VS / Countdown */}
-          <div className="flex flex-col items-center shrink-0 mx-3 min-w-[50px]">
-            <div className={`px-3 py-1.5 rounded-xl ${isLive ? "bg-destructive/15" : "bg-secondary/60"}`}>
-              <span className={`text-sm font-black ${isLive ? "text-destructive" : "text-primary"}`}>VS</span>
+          <div className="flex flex-col items-center shrink-0 mx-2 min-w-[44px]">
+            <div className={`px-2.5 py-1 rounded-lg ${isLive ? "bg-destructive/15" : "bg-secondary/60"}`}>
+              <span className={`text-xs font-black ${isLive ? "text-destructive" : "text-primary"}`}>VS</span>
             </div>
-            {/* Countdown timer below VS */}
             {countdown && (
-              <div className="mt-1.5 flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-full">
-                <Clock className="w-2.5 h-2.5 text-primary" />
-                <span className="text-[9px] font-mono font-bold text-primary tabular-nums">
+              <div className="mt-1 flex items-center gap-0.5 bg-primary/10 px-1.5 py-0.5 rounded-full">
+                <Clock className="w-2 h-2 text-primary" />
+                <span className="text-[8px] font-mono font-bold text-primary tabular-nums">
                   {countdown.text}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="flex-1 flex items-center gap-2.5 min-w-0 justify-end">
-            <span className="text-xs font-bold text-foreground truncate text-right leading-tight">{teamBName}</span>
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden border-2 shrink-0 bg-secondary/50 ${
+          <div className="flex-1 flex items-center gap-2 min-w-0 justify-end">
+            <span className="text-[10px] font-bold text-foreground truncate text-right leading-tight">{teamBName}</span>
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden border shrink-0 bg-secondary/50 ${
               isLive ? "border-destructive/30" : "border-border/30"
             }`}>
               {teamBLogo ? (
-                <img src={teamBLogo} alt={teamBName} className="w-9 h-9 object-contain" loading="lazy" />
+                <img src={teamBLogo} alt={teamBName} className="w-7 h-7 object-contain" loading="lazy" />
               ) : (
-                <span className="text-base font-bold text-muted-foreground">{teamBName.charAt(0)}</span>
+                <span className="text-sm font-bold text-muted-foreground">{teamBName.charAt(0)}</span>
               )}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/10">
-          <span className="text-[9px] text-muted-foreground/70">
+        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/10">
+          <span className="text-[8px] text-muted-foreground/70">
             {new Date(event.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
             {" • "}
             {new Date(event.startTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
           </span>
           <button
             onClick={(e) => { e.stopPropagation(); navigate(`/watch/event-${event.id}`); }}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all shadow-md ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[8px] font-bold uppercase tracking-wide transition-all shadow-md ${
               isLive
-                ? "bg-destructive text-destructive-foreground shadow-destructive/20 hover:shadow-destructive/40"
-                : "bg-primary text-primary-foreground shadow-primary/20 hover:shadow-primary/40"
+                ? "bg-destructive text-destructive-foreground shadow-destructive/20"
+                : "bg-primary text-primary-foreground shadow-primary/20"
             }`}
           >
             <Play className="w-2.5 h-2.5 fill-current" />
