@@ -1,6 +1,12 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initPerformanceMonitoring } from "./lib/performanceMonitor";
+
+// Initialize performance monitoring
+if (process.env.NODE_ENV === "production") {
+  initPerformanceMonitoring();
+}
 
 createRoot(document.getElementById("root")!).render(<App />);
 
