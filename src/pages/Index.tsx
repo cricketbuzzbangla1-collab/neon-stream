@@ -180,7 +180,7 @@ const Index = () => {
 
         </div>
       )}
-    </div> <meta name="google-site-verification" content="xNDd2M9HVxh9zsGbQUTIccUKqK_1vDgwRkkOSNC1ukA" />
+    </div>
   );
 };
 
