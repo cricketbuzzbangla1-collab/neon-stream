@@ -131,7 +131,7 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
           ? "ring-1 ring-destructive/40 shadow-lg shadow-destructive/10"
           : isStartingSoon
           ? "ring-1 ring-yellow-500/40 shadow-md shadow-yellow-500/10"
-          : "border border-border/40 shadow-md shadow-black/5 hover:border-primary/30 hover:shadow-lg"
+          : "ring-1 ring-border/20 shadow-sm"
       }`}
     >
       <div className={`absolute inset-0 bg-gradient-to-br ${gradientClass}`} />
