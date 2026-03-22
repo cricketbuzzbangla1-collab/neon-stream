@@ -7,6 +7,12 @@ export interface SectionSettings {
   lazyLoadLimit?: number;
 }
 
+export interface SeoSettings {
+  googleVerificationCode?: string;
+  sitemapUrl?: string;
+  robotsText?: string;
+}
+
 export interface AppConfig {
   chatEnabled: boolean;
   postEnabled: boolean;
@@ -21,6 +27,8 @@ export interface AppConfig {
     footballMatches: SectionSettings;
     noticeBar: SectionSettings;
   };
+  // SEO settings
+  seo?: SeoSettings;
 }
 
 const DEFAULT_CONFIG: AppConfig = {

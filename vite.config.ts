@@ -52,16 +52,6 @@ export default defineConfig(({ mode }) => ({
     reportCompressedSize: true,
   },
 
-  // Optimize CSS
-  css: {
-    postcss: {
-      plugins: [
-        require("autoprefixer"),
-        require("tailwindcss"),
-      ],
-    },
-  },
-
   // Performance hints
   logLevel: mode === "production" ? "warn" : "info",
 }));

@@ -6,7 +6,8 @@ import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import ScrollRestoration from "@/components/ScrollRestoration";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 const Index = lazy(() => import("./pages/Index"));
 const Channels = lazy(() => import("./pages/Channels"));
@@ -40,6 +41,20 @@ const PageLoader = () => (
 
 const AppContent = () => {
   const { isTransitioning } = useTheme();
+  const { settings } = useAppSettings();
+
+  // Inject Google verification meta tag
+  useEffect(() => {
+    if (settings.seo?.googleVerificationCode) {
+      let metaTag = document.querySelector('meta[name="google-site-verification"]');
+      if (!metaTag) {
+        metaTag = document.createElement("meta");
+        metaTag.setAttribute("name", "google-site-verification");
+        document.head.appendChild(metaTag);
+      }
+      metaTag.setAttribute("content", settings.seo.googleVerificationCode);
+    }
+  }, [settings.seo?.googleVerificationCode]);
 
   return (
     <div className={isTransitioning ? "theme-animate" : ""}>
