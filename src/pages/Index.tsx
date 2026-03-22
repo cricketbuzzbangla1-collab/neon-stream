@@ -1,20 +1,30 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLiveEvents, updateDocument } from "@/hooks/useFirestore";
 import { useFootballMatches } from "@/hooks/useFootballAPI";
 import { useAutoStreamMatcher } from "@/hooks/useAutoStreamMatcher";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
 import NoticeBar from "@/components/NoticeBar";
 import EmptyState from "@/components/EmptyState";
 import { Trophy, CalendarClock, ChevronDown, Clock } from "lucide-react";
 
-const INITIAL_UPCOMING_COUNT = 10;
-
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
   const { matches: allMatches, liveMatches, upcomingMatches, recentResults, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
+  const { settings } = useAppSettings();
   const [tick, setTick] = useState(Date.now());
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+
+  // Get section configuration with fallback defaults
+  const sectionConfig = useMemo(() => ({
+    liveEventsEnabled: settings.sectionConfig?.liveEventsEnabled ?? true,
+    upcomingEventsEnabled: settings.sectionConfig?.upcomingEventsEnabled ?? true,
+    footballLiveEnabled: settings.sectionConfig?.footballLiveEnabled ?? true,
+    footballUpcomingEnabled: settings.sectionConfig?.footballUpcomingEnabled ?? true,
+    footballRecentResultsEnabled: settings.sectionConfig?.footballRecentResultsEnabled ?? true,
+    matchCardInitialLoad: settings.sectionConfig?.matchCardInitialLoad ?? 10,
+  }), [settings.sectionConfig]);
 
   // Auto-stream matcher — links JSON streams to API matches
   useAutoStreamMatcher(allMatches, liveEvents);
@@ -39,41 +49,62 @@ const Index = () => {
     });
   }, [liveEvents]);
 
-  const activeEvents = liveEvents.filter(e => {
+  // Filter active events based on section config
+  const activeEvents = useMemo(() => liveEvents.filter(e => {
     if (!e.isActive) return false;
     return getEventStatus(e) !== "finished";
-  });
+  }), [liveEvents]);
 
-  const liveNowEvents = activeEvents
-    .filter(e => getEventStatus(e) === "live")
-    .sort((a, b) => {
-      const aHas = a.streamUrl ? 1 : 0;
-      const bHas = b.streamUrl ? 1 : 0;
-      if (bHas !== aHas) return bHas - aHas;
-      return a.startTime - b.startTime;
-    });
+  // Live events (manual) - only if enabled
+  const liveNowEvents = useMemo(() => {
+    if (!sectionConfig.liveEventsEnabled) return [];
+    return activeEvents
+      .filter(e => getEventStatus(e) === "live")
+      .sort((a, b) => {
+        const aHas = a.streamUrl ? 1 : 0;
+        const bHas = b.streamUrl ? 1 : 0;
+        if (bHas !== aHas) return bHas - aHas;
+        return a.startTime - b.startTime;
+      });
+  }, [activeEvents, sectionConfig.liveEventsEnabled]);
 
-  const upcomingEvents = activeEvents
-    .filter(e => getEventStatus(e) === "upcoming")
-    .sort((a, b) => a.startTime - b.startTime);
+  // Upcoming events (manual) - only if enabled
+  const upcomingEvents = useMemo(() => {
+    if (!sectionConfig.upcomingEventsEnabled) return [];
+    return activeEvents
+      .filter(e => getEventStatus(e) === "upcoming")
+      .sort((a, b) => a.startTime - b.startTime);
+  }, [activeEvents, sectionConfig.upcomingEventsEnabled]);
 
-  const sortedLiveMatches = footballEnabled
-    ? [...liveMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
-    : [];
-  const sortedUpcomingMatches = footballEnabled
-    ? [...upcomingMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
-    : [];
-  const sortedRecentResults = footballEnabled
-    ? [...recentResults].sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0))
-    : [];
+  // Football matches - only fetch if any section is enabled
+  const shouldLoadFootball = footballEnabled && (sectionConfig.footballLiveEnabled || sectionConfig.footballUpcomingEnabled || sectionConfig.footballRecentResultsEnabled);
+  
+  const sortedLiveMatches = useMemo(() => {
+    if (!shouldLoadFootball || !sectionConfig.footballLiveEnabled) return [];
+    return [...liveMatches].sort((a, b) => a.startTimestamp - b.startTimestamp);
+  }, [liveMatches, shouldLoadFootball, sectionConfig.footballLiveEnabled]);
 
-  const displayedUpcoming = showAllUpcoming
-    ? sortedUpcomingMatches
-    : sortedUpcomingMatches.slice(0, INITIAL_UPCOMING_COUNT);
-  const hasMoreUpcoming = sortedUpcomingMatches.length > INITIAL_UPCOMING_COUNT;
+  const sortedUpcomingMatches = useMemo(() => {
+    if (!shouldLoadFootball || !sectionConfig.footballUpcomingEnabled) return [];
+    return [...upcomingMatches].sort((a, b) => a.startTimestamp - b.startTimestamp);
+  }, [upcomingMatches, shouldLoadFootball, sectionConfig.footballUpcomingEnabled]);
+
+  const sortedRecentResults = useMemo(() => {
+    if (!shouldLoadFootball || !sectionConfig.footballRecentResultsEnabled) return [];
+    return [...recentResults].sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
+  }, [recentResults, shouldLoadFootball, sectionConfig.footballRecentResultsEnabled]);
+
+  // Lazy load with configurable initial count
+  const displayedUpcoming = useMemo(() => {
+    return showAllUpcoming
+      ? sortedUpcomingMatches
+      : sortedUpcomingMatches.slice(0, sectionConfig.matchCardInitialLoad);
+  }, [showAllUpcoming, sortedUpcomingMatches, sectionConfig.matchCardInitialLoad]);
+
+  const hasMoreUpcoming = sortedUpcomingMatches.length > sectionConfig.matchCardInitialLoad;
 
   const hasManualEvents = liveNowEvents.length > 0 || upcomingEvents.length > 0;
-  const hasFootball = footballEnabled && (sortedLiveMatches.length > 0 || sortedUpcomingMatches.length > 0 || sortedRecentResults.length > 0);
+  const hasFootball = shouldLoadFootball && (sortedLiveMatches.length > 0 || sortedUpcomingMatches.length > 0 || sortedRecentResults.length > 0);
   const loading = eventsLoading || footballLoading;
   const hasAnything = hasManualEvents || hasFootball;
 
@@ -121,7 +152,7 @@ const Index = () => {
           )}
 
           {/* ⚽ Football API — Live Scores */}
-          {sortedLiveMatches.length > 0 && (
+          {sectionConfig.footballLiveEnabled && sortedLiveMatches.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-destructive" />
@@ -137,7 +168,7 @@ const Index = () => {
           )}
 
           {/* ⚽ Football API — Upcoming Matches */}
-          {sortedUpcomingMatches.length > 0 && (
+          {sectionConfig.footballUpcomingEnabled && sortedUpcomingMatches.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 <CalendarClock className="w-4 h-4 text-primary" />
@@ -172,7 +203,7 @@ const Index = () => {
           )}
 
           {/* ⚽ Football API — Recent Results */}
-          {sortedRecentResults.length > 0 && (
+          {sectionConfig.footballRecentResultsEnabled && sortedRecentResults.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />

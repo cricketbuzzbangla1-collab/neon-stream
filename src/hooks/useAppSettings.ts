@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+
+export interface SectionConfig {
+  liveEventsEnabled: boolean;
+  upcomingEventsEnabled: boolean;
+  footballLiveEnabled: boolean;
+  footballUpcomingEnabled: boolean;
+  footballRecentResultsEnabled: boolean;
+  matchCardInitialLoad: number; // Default: 10 matches
+}
 
 export interface AppConfig {
   chatEnabled: boolean;
@@ -10,7 +19,18 @@ export interface AppConfig {
   maintenanceMode: boolean;
   allowGuestWatch: boolean;
   badWordFilterEnabled: boolean;
+  // Section visibility controls
+  sectionConfig?: SectionConfig;
 }
+
+export const DEFAULT_SECTION_CONFIG: SectionConfig = {
+  liveEventsEnabled: true,
+  upcomingEventsEnabled: true,
+  footballLiveEnabled: true,
+  footballUpcomingEnabled: true,
+  footballRecentResultsEnabled: true,
+  matchCardInitialLoad: 10,
+};
 
 const DEFAULT_CONFIG: AppConfig = {
   chatEnabled: true,
@@ -20,6 +40,7 @@ const DEFAULT_CONFIG: AppConfig = {
   maintenanceMode: false,
   allowGuestWatch: true,
   badWordFilterEnabled: true,
+  sectionConfig: DEFAULT_SECTION_CONFIG,
 };
 
 export function useAppSettings() {
@@ -41,4 +62,12 @@ export function useAppSettings() {
 
 export async function updateAppSettings(data: Partial<AppConfig>) {
   await setDoc(doc(db, "appSettings", "config"), data, { merge: true });
+}
+
+export async function updateSectionConfig(data: Partial<SectionConfig>) {
+  const current = await getDoc(doc(db, "appSettings", "config"));
+  const currentConfig = current.exists() ? current.data()?.sectionConfig || DEFAULT_SECTION_CONFIG : DEFAULT_SECTION_CONFIG;
+  await setDoc(doc(db, "appSettings", "config"), { 
+    sectionConfig: { ...currentConfig, ...data } 
+  }, { merge: true });
 }

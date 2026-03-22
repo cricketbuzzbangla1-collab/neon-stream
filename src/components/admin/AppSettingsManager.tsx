@@ -1,5 +1,5 @@
-import { useAppSettings, updateAppSettings, AppConfig } from "@/hooks/useAppSettings";
-import { Settings, Save, Link as LinkIcon } from "lucide-react";
+import { useAppSettings, updateAppSettings, updateSectionConfig, AppConfig, SectionConfig } from "@/hooks/useAppSettings";
+import { Settings, Save, Link as LinkIcon, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
@@ -8,10 +8,28 @@ import { db } from "@/lib/firebase";
 const AppSettingsManager = () => {
   const { settings, loading } = useAppSettings();
   const [form, setForm] = useState<AppConfig>(settings);
+  const [sectionConfig, setSectionConfig] = useState<SectionConfig>(settings.sectionConfig || {
+    liveEventsEnabled: true,
+    upcomingEventsEnabled: true,
+    footballLiveEnabled: true,
+    footballUpcomingEnabled: true,
+    footballRecentResultsEnabled: true,
+    matchCardInitialLoad: 10,
+  });
   const [streamJsonUrl, setStreamJsonUrl] = useState("");
   const [autoStreamEnabled, setAutoStreamEnabled] = useState(true);
 
-  useEffect(() => { setForm(settings); }, [settings]);
+  useEffect(() => { 
+    setForm(settings);
+    setSectionConfig(settings.sectionConfig || {
+      liveEventsEnabled: true,
+      upcomingEventsEnabled: true,
+      footballLiveEnabled: true,
+      footballUpcomingEnabled: true,
+      footballRecentResultsEnabled: true,
+      matchCardInitialLoad: 10,
+    });
+  }, [settings]);
 
   // Load stream settings from appSettings/main
   useEffect(() => {
@@ -27,6 +45,11 @@ const AppSettingsManager = () => {
   const handleSave = async () => {
     await updateAppSettings(form);
     toast.success("Settings saved");
+  };
+
+  const handleSaveSectionConfig = async () => {
+    await updateSectionConfig(sectionConfig);
+    toast.success("Section settings saved");
   };
 
   const handleSaveStreamJson = async () => {
@@ -81,6 +104,61 @@ const AppSettingsManager = () => {
         </div>
         <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all">
           <Save className="w-4 h-4" /> Save
+        </button>
+      </div>
+
+      {/* Section Visibility Controls */}
+      <div className="glass-card neon-border p-6 space-y-4 max-w-lg">
+        <h3 className="font-display font-bold text-foreground flex items-center gap-2">
+          <Zap className="w-5 h-5 text-primary" /> Homepage Sections
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Control which sections are displayed on the homepage to optimize performance.
+        </p>
+        <div className="space-y-1 divide-y divide-border/30">
+          <Toggle 
+            label="Live Events (Manual)" 
+            value={sectionConfig.liveEventsEnabled} 
+            onChange={(v) => setSectionConfig({ ...sectionConfig, liveEventsEnabled: v })} 
+          />
+          <Toggle 
+            label="Upcoming Events (Manual)" 
+            value={sectionConfig.upcomingEventsEnabled} 
+            onChange={(v) => setSectionConfig({ ...sectionConfig, upcomingEventsEnabled: v })} 
+          />
+          <Toggle 
+            label="Football Live Scores" 
+            value={sectionConfig.footballLiveEnabled} 
+            onChange={(v) => setSectionConfig({ ...sectionConfig, footballLiveEnabled: v })} 
+          />
+          <Toggle 
+            label="Football Upcoming Matches" 
+            value={sectionConfig.footballUpcomingEnabled} 
+            onChange={(v) => setSectionConfig({ ...sectionConfig, footballUpcomingEnabled: v })} 
+          />
+          <Toggle 
+            label="Football Recent Results" 
+            value={sectionConfig.footballRecentResultsEnabled} 
+            onChange={(v) => setSectionConfig({ ...sectionConfig, footballRecentResultsEnabled: v })} 
+          />
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-foreground">Initial Match Load (cards)</span>
+            <select
+              value={sectionConfig.matchCardInitialLoad}
+              onChange={(e) => setSectionConfig({ ...sectionConfig, matchCardInitialLoad: Number(e.target.value) })}
+              className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
+            >
+              {[5, 10, 15, 20, 30].map(n => (
+                <option key={n} value={n}>{n} matches</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button 
+          onClick={handleSaveSectionConfig} 
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all"
+        >
+          <Save className="w-4 h-4" /> Save Section Settings
         </button>
       </div>
 
