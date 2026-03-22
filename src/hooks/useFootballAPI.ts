@@ -53,6 +53,13 @@ export const FOOTBALLDATA_LEAGUES: Record<string, { name: string; country: strin
   "CL": { name: "UEFA Champions League", country: "Europe" },
   "EC": { name: "European Championship", country: "Europe" },
   "WC": { name: "FIFA World Cup", country: "World" },
+  "MLS": { name: "Major League Soccer", country: "USA" },
+  "SAL": { name: "Saudi Pro League", country: "Saudi Arabia" },
+  "AL1": { name: "A-League", country: "Australia" },
+  "ELC": { name: "Championship", country: "England" },
+  "PPL": { name: "Primeira Liga", country: "Portugal" },
+  "DED": { name: "Eredivisie", country: "Netherlands" },
+  "BSA": { name: "Série A", country: "Brazil" },
 };
 
 const RATE_KEY_PREFIX = "football_api_rate_hourly";
