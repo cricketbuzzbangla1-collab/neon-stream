@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLiveEvents, updateDocument } from "@/hooks/useFirestore";
 import { useFootballMatches } from "@/hooks/useFootballAPI";
 import { useAutoStreamMatcher } from "@/hooks/useAutoStreamMatcher";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
 import NoticeBar from "@/components/NoticeBar";
@@ -12,7 +13,8 @@ const INITIAL_UPCOMING_COUNT = 10;
 
 const Index = () => {
   const { data: liveEvents, loading: eventsLoading } = useLiveEvents();
-  const { matches: allMatches, liveMatches, upcomingMatches, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
+  const { matches: allMatches, liveMatches, upcomingMatches, recentResults, loading: footballLoading, enabled: footballEnabled } = useFootballMatches();
+  const { settings } = useAppSettings();
   const [tick, setTick] = useState(Date.now());
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
@@ -64,6 +66,7 @@ const Index = () => {
     ? [...upcomingMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
     : [];
 
+
   const displayedUpcoming = showAllUpcoming
     ? sortedUpcomingMatches
     : sortedUpcomingMatches.slice(0, INITIAL_UPCOMING_COUNT);
@@ -74,9 +77,15 @@ const Index = () => {
   const loading = eventsLoading || footballLoading;
   const hasAnything = hasManualEvents || hasFootball;
 
+  // Determine which sections to show based on settings
+  const showNoticeBar = settings.sections?.noticeBar?.enabled !== false;
+  const showLiveEvents = settings.sections?.liveEvents?.enabled !== false;
+  const showFootball = settings.sections?.footballMatches?.enabled !== false;
+  const footballInitialLimit = settings.sections?.footballMatches?.lazyLoadLimit || 5;
+
   return (
     <div className="min-h-screen pb-20 pt-16">
-      <NoticeBar />
+      {showNoticeBar && <NoticeBar />}
 
       {loading ? (
         <div className="container py-6 space-y-3">
@@ -89,7 +98,7 @@ const Index = () => {
       ) : (
         <div className="space-y-6 py-6">
           {/* 🔴 Live Now — Manual Events */}
-          {liveNowEvents.length > 0 && (
+          {showLiveEvents && liveNowEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
@@ -104,7 +113,7 @@ const Index = () => {
           )}
 
           {/* ⏳ Upcoming — Manual Events */}
-          {upcomingEvents.length > 0 && (
+          {showLiveEvents && upcomingEvents.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 ⏳ Upcoming
@@ -118,7 +127,7 @@ const Index = () => {
           )}
 
           {/* ⚽ Football API — Live Scores */}
-          {sortedLiveMatches.length > 0 && (
+          {showFootball && sortedLiveMatches.length > 0 && (
             <section className="container">
               <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-destructive" />
@@ -126,7 +135,7 @@ const Index = () => {
                 Live Scores
               </h2>
               <div className="flex flex-col gap-2">
-                {sortedLiveMatches.slice(0, 20).map(m => (
+                {sortedLiveMatches.slice(0, Math.max(footballInitialLimit, 20)).map(m => (
                   <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
                 ))}
               </div>
@@ -134,7 +143,7 @@ const Index = () => {
           )}
 
           {/* ⚽ Football API — Upcoming Matches */}
-          {sortedUpcomingMatches.length > 0 && (
+          {showFootball && sortedUpcomingMatches.length > 0 && (
             <section className="container">
               <div className="neon-border rounded-xl p-4">
                 <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
@@ -170,6 +179,8 @@ const Index = () => {
               </div>
             </section>
           )}
+
+
         </div>
       )}
     </div>
