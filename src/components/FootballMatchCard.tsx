@@ -16,6 +16,7 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
   const navigate = useNavigate();
   const { user } = useAuth();
   const isLive = match.isLive;
+  const isFinished = match.isFinished;
   const hasScore = match.homeScore || match.awayScore;
   const now = externalNow ?? Date.now();
   const [importing, setImporting] = useState(false);
@@ -131,6 +132,8 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
           ? "ring-1 ring-destructive/40 shadow-lg shadow-destructive/10"
           : isStartingSoon
           ? "ring-1 ring-yellow-500/40 shadow-md shadow-yellow-500/10"
+          : isFinished
+          ? "ring-1 ring-muted-foreground/20 shadow-sm opacity-75"
           : "ring-1 ring-border/20 shadow-sm"
       }`}
     >
@@ -160,17 +163,22 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
             <Play className="w-2.5 h-2.5 fill-current" /> Watch
           </div>
         )}
-        {isKickoffImminent && !isLive && (
+        {isFinished && (
+          <div className="bg-muted text-muted-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
+            ✓ Finished
+          </div>
+        )}
+        {isKickoffImminent && !isLive && !isFinished && (
           <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1 animate-pulse">
             <AlertTriangle className="w-2.5 h-2.5" /> Kickoff!
           </div>
         )}
-        {isStartingSoon && !isKickoffImminent && !isLive && (
+        {isStartingSoon && !isKickoffImminent && !isLive && !isFinished && (
           <div className="bg-yellow-500 text-black px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
             🔥 Soon
           </div>
         )}
-        {isLive && !matchingEvent && (
+        {isLive && !matchingEvent && !isFinished && (
           <div className="bg-destructive text-destructive-foreground px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
             <Flame className="w-2.5 h-2.5" /> Live
           </div>
@@ -203,7 +211,22 @@ const FootballMatchCard = ({ match, liveEvents = [], now: externalNow }: Props) 
 
           {/* Center: Score + Live Minute / Match Time */}
           <div className="flex flex-col items-center shrink-0 mx-2 min-w-[50px]">
-            {isLive ? (
+            {isFinished ? (
+              <>
+                <div className="flex items-center gap-1 bg-muted/40 border border-muted/40 px-1.5 py-0.5 rounded-full mb-0.5">
+                  <span className="text-[8px] font-mono font-black tabular-nums text-muted-foreground">
+                    FINAL
+                  </span>
+                </div>
+                {hasScore && (
+                  <div className="bg-muted/30 border border-muted/40 px-2.5 py-1 rounded-lg">
+                    <span className="text-base font-black tabular-nums tracking-widest text-muted-foreground">
+                      {match.homeScore} - {match.awayScore}
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : isLive ? (
               <>
                 <div className="flex items-center gap-1 bg-destructive/20 border border-destructive/40 px-1.5 py-0.5 rounded-full mb-0.5">
                   <span className="w-1 h-1 rounded-full bg-destructive animate-pulse" />
