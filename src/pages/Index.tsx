@@ -7,7 +7,7 @@ import LiveEventCard, { getEventStatus } from "@/components/LiveEventCard";
 import FootballMatchCard from "@/components/FootballMatchCard";
 import NoticeBar from "@/components/NoticeBar";
 import EmptyState from "@/components/EmptyState";
-import { Trophy, CalendarClock, ChevronDown, Clock } from "lucide-react";
+import { Trophy, CalendarClock, ChevronDown } from "lucide-react";
 
 const INITIAL_UPCOMING_COUNT = 10;
 
@@ -65,9 +65,7 @@ const Index = () => {
   const sortedUpcomingMatches = footballEnabled
     ? [...upcomingMatches].sort((a, b) => a.startTimestamp - b.startTimestamp)
     : [];
-  const sortedRecentResults = footballEnabled
-    ? [...recentResults].sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0))
-    : [];
+
 
   const displayedUpcoming = showAllUpcoming
     ? sortedUpcomingMatches
@@ -75,7 +73,7 @@ const Index = () => {
   const hasMoreUpcoming = sortedUpcomingMatches.length > INITIAL_UPCOMING_COUNT;
 
   const hasManualEvents = liveNowEvents.length > 0 || upcomingEvents.length > 0;
-  const hasFootball = footballEnabled && (sortedLiveMatches.length > 0 || sortedUpcomingMatches.length > 0 || sortedRecentResults.length > 0);
+  const hasFootball = footballEnabled && (sortedLiveMatches.length > 0 || sortedUpcomingMatches.length > 0);
   const loading = eventsLoading || footballLoading;
   const hasAnything = hasManualEvents || hasFootball;
 
@@ -179,23 +177,7 @@ const Index = () => {
             </section>
           )}
 
-          {/* ⚽ Football API — Recent Results */}
-          {showFootball && sortedRecentResults.length > 0 && (
-            <section className="container">
-              <h2 className="text-lg font-display font-bold text-foreground mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                Recent Results
-                <span className="text-xs font-normal text-muted-foreground ml-1">
-                  ({sortedRecentResults.length})
-                </span>
-              </h2>
-              <div className="flex flex-col gap-2">
-                {sortedRecentResults.slice(0, 10).map(m => (
-                  <FootballMatchCard key={m.id} match={m} liveEvents={liveEvents} now={tick} />
-                ))}
-              </div>
-            </section>
-          )}
+
         </div>
       )}
     </div>
